@@ -55,6 +55,21 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     clearError(name);
   };
 
+  // Проверка валидности формы
+  const isFormValid = useRef(() => {
+    // Проверяем, что все обязательные поля заполнены
+    const requiredFieldsFilled = requiredFields.every(
+      field => formData[field] && formData[field].trim()
+    );
+    
+    // Проверяем, что нет ошибок валидации
+    const noValidationErrors = !Object.keys(errors).some(
+      key => key !== 'submit' && errors[key] && errors[key].length > 0
+    );
+
+    return requiredFieldsFilled && noValidationErrors;
+  }).current;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -63,7 +78,9 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
 
     if (!isValid) {
       // Прокрутка к первой ошибке
-      const firstErrorField = Object.keys(errors)[0];
+      const firstErrorField = Object.keys(errors).find(
+        key => key !== 'submit' && errors[key] && errors[key].length > 0
+      );
       if (firstErrorField) {
         const errorElement = formRef.current?.querySelector(`[name="${firstErrorField}"]`);
         errorElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -81,9 +98,6 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     } finally {
       setIsSubmitting(false);
     }
-
-    console.log('Form data:', formData);
-    console.log('Is form valid:', Object.values(formData).every(value => value && value.trim()));
   };
 
   const handleClose = () => {
@@ -106,6 +120,9 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     const value = formData[fieldName] || '';
     return `${value.length}/${maxLength}`;
   };
+
+  // Проверка активности кнопки отправки
+  const isSubmitDisabled = isSubmitting || !isFormValid();
 
   if (!show) return null;
 
@@ -155,20 +172,24 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
                 placeholder="Иванов Иван Иванович"
                 className={getFieldClassName('foreman')}
                 disabled={isSubmitting}
-                maxLength={validationRules.foreman.maxLength}
+                maxLength={validationRules.foreman?.maxLength || 100}
               />
               <div className="field-meta">
                 <span className="char-count">
-                  {getCharacterCount('foreman', validationRules.foreman.maxLength)}
+                  {getCharacterCount('foreman', validationRules.foreman?.maxLength || 100)}
                 </span>
               </div>
               {errors.foreman && touched.foreman && (
                 <div className="error-message">
-                  {errors.foreman.map((error, index) => (
+                  {Array.isArray(errors.foreman) ? errors.foreman.map((error, index) => (
                     <div key={index} className="error-item">
                       <span className="error-dot">•</span> {error}
                     </div>
-                  ))}
+                  )) : (
+                    <div className="error-item">
+                      <span className="error-dot">•</span> {errors.foreman}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -187,20 +208,24 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
                 placeholder="Название лаборатории"
                 className={getFieldClassName('lab')}
                 disabled={isSubmitting}
-                maxLength={validationRules.lab.maxLength}
+                maxLength={validationRules.lab?.maxLength || 100}
               />
               <div className="field-meta">
                 <span className="char-count">
-                  {getCharacterCount('lab', validationRules.lab.maxLength)}
+                  {getCharacterCount('lab', validationRules.lab?.maxLength || 100)}
                 </span>
               </div>
               {errors.lab && touched.lab && (
                 <div className="error-message">
-                  {errors.lab.map((error, index) => (
+                  {Array.isArray(errors.lab) ? errors.lab.map((error, index) => (
                     <div key={index} className="error-item">
                       <span className="error-dot">•</span> {error}
                     </div>
-                  ))}
+                  )) : (
+                    <div className="error-item">
+                      <span className="error-dot">•</span> {errors.lab}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -221,20 +246,24 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
                 placeholder="123"
                 className={getFieldClassName('roomNumber')}
                 disabled={isSubmitting}
-                maxLength={validationRules.roomNumber.maxLength}
+                maxLength={validationRules.roomNumber?.maxLength || 20}
               />
               <div className="field-meta">
                 <span className="char-count">
-                  {getCharacterCount('roomNumber', validationRules.roomNumber.maxLength)}
+                  {getCharacterCount('roomNumber', validationRules.roomNumber?.maxLength || 20)}
                 </span>
               </div>
               {errors.roomNumber && touched.roomNumber && (
                 <div className="error-message">
-                  {errors.roomNumber.map((error, index) => (
+                  {Array.isArray(errors.roomNumber) ? errors.roomNumber.map((error, index) => (
                     <div key={index} className="error-item">
                       <span className="error-dot">•</span> {error}
                     </div>
-                  ))}
+                  )) : (
+                    <div className="error-item">
+                      <span className="error-dot">•</span> {errors.roomNumber}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -258,11 +287,15 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
               </select>
               {errors.priority && touched.priority && (
                 <div className="error-message">
-                  {errors.priority.map((error, index) => (
+                  {Array.isArray(errors.priority) ? errors.priority.map((error, index) => (
                     <div key={index} className="error-item">
                       <span className="error-dot">•</span> {error}
                     </div>
-                  ))}
+                  )) : (
+                    <div className="error-item">
+                      <span className="error-dot">•</span> {errors.priority}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -282,20 +315,24 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
               rows="4"
               className={getFieldClassName('description')}
               disabled={isSubmitting}
-              maxLength={validationRules.description.maxLength}
+              maxLength={validationRules.description?.maxLength || 500}
             />
             <div className="field-meta">
               <span className="char-count">
-                {getCharacterCount('description', validationRules.description.maxLength)}
+                {getCharacterCount('description', validationRules.description?.maxLength || 500)}
               </span>
             </div>
             {errors.description && touched.description && (
               <div className="error-message">
-                {errors.description.map((error, index) => (
+                {Array.isArray(errors.description) ? errors.description.map((error, index) => (
                   <div key={index} className="error-item">
                     <span className="error-dot">•</span> {error}
                   </div>
-                ))}
+                )) : (
+                  <div className="error-item">
+                    <span className="error-dot">•</span> {errors.description}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -320,11 +357,15 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
             </select>
             {errors.assignee && touched.assignee && (
               <div className="error-message">
-                {errors.assignee.map((error, index) => (
+                {Array.isArray(errors.assignee) ? errors.assignee.map((error, index) => (
                   <div key={index} className="error-item">
                     <span className="error-dot">•</span> {error}
                   </div>
-                ))}
+                )) : (
+                  <div className="error-item">
+                    <span className="error-dot">•</span> {errors.assignee}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -346,8 +387,8 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
             </button>
             <button 
               type="submit"
-              className="submit-button"
-              disabled={isSubmitting || hasErrors}
+              className={`submit-button ${isSubmitDisabled ? 'disabled' : ''}`}
+              disabled={isSubmitDisabled}
             >
               {isSubmitting ? (
                 <>

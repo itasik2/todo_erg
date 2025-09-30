@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { validateField, validateForm } from '../utils/validation';
 
 export const useForm = (initialState, validationRules) => {
@@ -17,7 +17,7 @@ export const useForm = (initialState, validationRules) => {
       const fieldErrors = validateField(name, value, validationRules);
       setErrors(prev => ({
         ...prev,
-        [name]: fieldErrors || null
+        [name]: fieldErrors
       }));
     }
   }, [touched, validationRules]);
@@ -28,7 +28,7 @@ export const useForm = (initialState, validationRules) => {
     const fieldErrors = validateField(name, formData[name], validationRules);
     setErrors(prev => ({
       ...prev,
-      [name]: fieldErrors || null
+      [name]: fieldErrors
     }));
   }, [formData, validationRules]);
 
@@ -55,7 +55,7 @@ export const useForm = (initialState, validationRules) => {
   const setError = useCallback((field, message) => {
     setErrors(prev => ({
       ...prev,
-      [field]: [message]
+      [field]: Array.isArray(message) ? message : [message]
     }));
   }, []);
 
@@ -66,6 +66,29 @@ export const useForm = (initialState, validationRules) => {
       return newErrors;
     });
   }, []);
+
+  // Исправленная функция hasErrors - проверяет только реальные ошибки
+  const hasErrors = useMemo(() => {
+    return Object.keys(errors).some(key => {
+      const error = errors[key];
+      // Проверяем, что ошибка существует и не пустая
+      return error && 
+             Array.isArray(error) ? error.length > 0 : Boolean(error);
+    });
+  }, [errors]);
+
+  // Дополнительная функция для проверки валидности формы
+  const isFormValid = useCallback((requiredFields = []) => {
+    // Проверяем, что все обязательные поля заполнены
+    const requiredFieldsFilled = requiredFields.every(
+      field => formData[field] && formData[field].toString().trim()
+    );
+    
+    // Проверяем, что нет ошибок валидации
+    const noValidationErrors = !hasErrors;
+
+    return requiredFieldsFilled && noValidationErrors;
+  }, [formData, hasErrors]);
 
   return {
     formData,
@@ -80,6 +103,7 @@ export const useForm = (initialState, validationRules) => {
     setError,
     clearError,
     setFormData,
-    hasErrors: Object.keys(errors).length > 0
+    hasErrors,
+    isFormValid
   };
 };

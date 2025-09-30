@@ -43,11 +43,10 @@ function App() {
     notifications, 
     showNotification, 
     removeNotification, 
-    audioRef,
-    notification 
+    audioRef
   } = useNotifications();
 
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   // Загрузка данных
   const loadData = useCallback(async () => {
@@ -57,8 +56,8 @@ function App() {
         mockAPI.getAssignees(),
       ]);
 
-      setTasks(tasksData.tasks || tasksData);
-      setAssignees(assigneesData.assignees || assigneesData);
+      setTasks(tasksData.tasks || tasksData || []);
+      setAssignees(assigneesData.assignees || assigneesData || []);
     } catch (error) {
       console.error("Ошибка загрузки данных:", error);
       showNotification("Ошибка загрузки данных", "error");
@@ -86,6 +85,7 @@ function App() {
     "description",
     "assignee",
   ];
+  
   const {
     searchTerm,
     setSearchTerm,
@@ -97,7 +97,13 @@ function App() {
   } = useSearch(filteredTasks, searchableFields);
 
   // Пагинация
-  const pagination = usePagination(searchResults, itemsPerPage);
+  const {
+    currentPage,
+    currentItems,
+    totalPages,
+    goToPage,
+    setItemsPerPage: setPaginationItemsPerPage
+  } = usePagination(searchResults, itemsPerPage);
 
   // Обработчики
   const handleFilterChange = useCallback((filter, value) => {
@@ -107,22 +113,40 @@ function App() {
   const handlePageChange = useCallback((page, newItemsPerPage = itemsPerPage) => {
     if (newItemsPerPage !== itemsPerPage) {
       setItemsPerPage(newItemsPerPage);
+      setPaginationItemsPerPage(newItemsPerPage);
     }
-    pagination.goToPage(page);
-  }, [itemsPerPage, pagination]);
+    goToPage(page);
+  }, [itemsPerPage, goToPage, setPaginationItemsPerPage]);
 
   // Авторизация
   const handleLogin = useCallback(
     (userData, isAdmin = false) => {
-      const user = { ...userData, isAdmin };
+      console.log('Login attempt:', userData, 'isAdmin:', isAdmin);
+
+      const user = { 
+        ...userData, 
+        isAdmin, 
+        id: Date.now().toString(),
+        displayName: `${userData.firstName} ${userData.lastName || ''}`.trim()
+      };
+      
       setCurrentUser(user);
       setIsAuthenticated(true);
       setAdminMode(isAdmin);
       localStorage.setItem("currentUser", JSON.stringify(user));
-      showNotification(`Добро пожаловать, ${userData.firstName}!`);
+
+      const welcomeMessage = isAdmin 
+        ? `Добро пожаловать, администратор ${userData.firstName}!` 
+        : `Добро пожаловать, ${userData.firstName}!`;
+        
+      showNotification(welcomeMessage);
     },
-    [showNotification],
+    [showNotification]
   );
+
+  const handleAdminLogin = useCallback((adminData) => {
+    handleLogin(adminData, true);
+  }, [handleLogin]);
 
   const handleLogout = useCallback(() => {
     setIsAuthenticated(false);
@@ -137,7 +161,7 @@ function App() {
     async (formData) => {
       const requiredFields = ["foreman", "lab", "roomNumber", "description"];
       const missingFields = requiredFields.filter(
-        (field) => !formData[field].trim(),
+        (field) => !formData[field]?.trim(),
       );
 
       if (missingFields.length > 0) {
@@ -152,7 +176,7 @@ function App() {
           acceptedAt: null,
           completedAt: null,
           timeSpent: null,
-          author: `${currentUser.firstName} ${currentUser.lastName}`,
+          author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
         };
 
         const newTask = await mockAPI.createTask(taskData);
@@ -199,9 +223,14 @@ function App() {
   // Работа с исполнителями
   const addAssignee = useCallback(
     async (assigneeName) => {
+      if (!assigneeName.trim()) {
+        showNotification("Введите имя исполнителя", "error");
+        return;
+      }
+
       try {
         await mockAPI.createAssignee({ name: assigneeName });
-        setAssignees((prev) => [...prev, assigneeName]);
+        setAssignees((prev) => [...prev, assigneeName.trim()]);
         showNotification("Исполнитель добавлен");
       } catch (error) {
         showNotification("Ошибка при добавлении исполнителя", "error");
@@ -227,10 +256,11 @@ function App() {
   const handleStatusChange = useCallback(
     async (taskId, newStatus, currentStatus) => {
       if (currentStatus === "выполнено" && !adminMode) {
-        return showNotification(
+        showNotification(
           "Только администратор может изменять выполненные задачи",
           "error",
         );
+        return;
       }
 
       if (newStatus === "выполнено") {
@@ -243,8 +273,9 @@ function App() {
         });
       } else {
         const updates = { status: newStatus };
-        if (newStatus === "в работе")
+        if (newStatus === "в работе") {
           updates.acceptedAt = new Date().toISOString();
+        }
         await updateTask(taskId, updates);
       }
     },
@@ -258,10 +289,11 @@ function App() {
       timeModal.minutes < 0 ||
       timeModal.minutes >= 60
     ) {
-      return setTimeModal((prev) => ({
+      setTimeModal((prev) => ({
         ...prev,
         error: "Введите корректное время (часы ≥ 0, 0 ≤ минуты < 60)",
       }));
+      return;
     }
 
     const timeSpent = `${timeModal.hours}ч ${timeModal.minutes}м`;
@@ -270,6 +302,7 @@ function App() {
       timeSpent,
       completedAt: new Date().toISOString(),
     });
+    
     setTimeModal({
       show: false,
       taskId: null,
@@ -320,6 +353,7 @@ function App() {
         setIsAuthenticated(true);
         setAdminMode(user.isAdmin || false);
       } catch (e) {
+        console.error("Ошибка при загрузке пользователя:", e);
         localStorage.removeItem("currentUser");
       }
     }
@@ -329,12 +363,11 @@ function App() {
   // Условный рендеринг
   if (!isAuthenticated) {
     return (
-      <div className="app">
+      <div className="app" data-theme={theme}>
         <LoginForm
           onLogin={handleLogin}
-          onAdminLogin={(userData) => handleLogin(userData, true)}
+          onAdminLogin={handleAdminLogin}
         />
-        <Notification {...notification} />
       </div>
     );
   }
@@ -348,7 +381,9 @@ function App() {
           user={currentUser} 
           onLogout={handleLogout} 
           stats={stats}  
-          extraControls={<ThemeToggle />} 
+          extraControls={
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          } 
         />
 
         <div className="main-content">
@@ -372,9 +407,11 @@ function App() {
 
           <div className="toolbar">
             <ExportButton tasks={searchResults} />
-            <span className="search-info">
-              {hasActiveSearch && `Найдено: ${searchResults.length} заявок`}
-            </span>
+            {hasActiveSearch && (
+              <span className="search-info">
+                Найдено: {searchResults.length} заявок
+              </span>
+            )}
           </div>
 
           <div className="filters">
@@ -398,7 +435,7 @@ function App() {
           </div>
 
           <TaskTable
-            tasks={pagination.currentItems}
+            tasks={currentItems}
             assignees={assignees}
             adminMode={adminMode}
             onStatusChange={handleStatusChange}
@@ -407,15 +444,24 @@ function App() {
             onAssigneeChange={async (taskId, assignee) => {
               await updateTask(taskId, { assignee: assignee || null });
             }}
+            onTimeSpentChange={async (taskId, timeSpent) => {
+              await updateTask(taskId, { 
+                timeSpent,
+                status: "выполнено",
+                completedAt: new Date().toISOString() 
+              });
+            }}
           />
 
-          <Pagination
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            onPageChange={handlePageChange}
-            totalItems={searchResults.length}
-            itemsPerPage={itemsPerPage}
-          />
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              totalItems={searchResults.length}
+              itemsPerPage={itemsPerPage}
+            />
+          )}
 
           <button
             className="add-task-button"
@@ -436,8 +482,6 @@ function App() {
           onSubmit={addTaskFromModal}
           assignees={assignees}
         />
-
-        <Notification {...notification} />
 
         <TimeInputModal
           show={timeModal.show}
