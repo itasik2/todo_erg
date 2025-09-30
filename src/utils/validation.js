@@ -1,10 +1,10 @@
-// Убрали ненужные escape-символы
+// Полностью убрали все ненужные escape-символы
 export const validationRules = {
   foreman: {
     required: true,
     minLength: 2,
     maxLength: 100,
-    pattern: /^[а-яА-ЯёЁa-zA-Z\s\-\.]+$/, // Убрали \
+    pattern: /^[а-яА-ЯёЁa-zA-Z\s\-.]+$/, // Убрали \ перед .
     message: 'ФИО должно содержать только буквы, пробелы, точки и дефисы',
     validate: (value) => {
       const words = value.trim().split(/\s+/);
@@ -18,14 +18,14 @@ export const validationRules = {
     required: true,
     minLength: 2,
     maxLength: 50,
-    pattern: /^[а-яА-ЯёЁa-zA-Z0-9\s\-\(\)]+$/, // Убрали \
+    pattern: /^[а-яА-ЯёЁa-zA-Z0-9\s\-()]+$/, // Убрали \ перед ( и )
     message: 'Название лаборатории может содержать буквы, цифры, пробелы, дефисы и скобки'
   },
   roomNumber: {
     required: true,
     minLength: 1,
     maxLength: 10,
-    pattern: /^[0-9а-яА-Яa-zA-Z\-/]+$/, // Убрали \
+    pattern: /^[0-9а-яА-Яa-zA-Z\-/]+$/, // Убрали \ перед /
     message: 'Номер кабинета может содержать цифры, буквы, дефисы и слэши'
   },
   description: {
@@ -45,7 +45,7 @@ export const validationRules = {
   },
   assignee: {
     maxLength: 100,
-    pattern: /^[а-яА-ЯёЁa-zA-Z\s\-]+$/, // Убрали \
+    pattern: /^[а-яА-ЯёЁa-zA-Z\s-]+$/, // Убрали \ перед -
     message: 'Имя исполнителя должно содержать только буквы, пробелы и дефисы'
   },
   priority: {
@@ -114,11 +114,11 @@ export const validateForm = (formData, fieldsToValidate) => {
 
 export const validateTime = (hours, minutes) => {
   const errors = [];
-
+  
   if (hours < 0 || hours > 1000) {
     errors.push('Часы должны быть от 0 до 1000');
   }
-
+  
   if (minutes < 0 || minutes > 59) {
     errors.push('Минуты должны быть от 0 до 59');
   }
@@ -126,7 +126,7 @@ export const validateTime = (hours, minutes) => {
   if (hours === 0 && minutes === 0) {
     errors.push('Время выполнения не может быть нулевым');
   }
-
+  
   return errors;
 };
 

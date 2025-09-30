@@ -4,6 +4,10 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const audioRef = useRef(null);
 
+  const removeNotification = useCallback((id) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== id));
+  }, []);
+
   const playSound = (type) => {
     if (audioRef.current) {
       audioRef.current.src = type === 'success' ? '/sounds/success.mp3' : '/sounds/error.mp3';
@@ -36,11 +40,7 @@ export const useNotifications = () => {
     }
 
     return id;
-  }, []); // Убрали removeNotification из зависимостей
-
-  const removeNotification = useCallback((id) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
-  }, []);
+  }, [removeNotification]); // Добавили недостающую зависимость
 
   const clearAllNotifications = useCallback(() => {
     setNotifications([]);
