@@ -81,6 +81,9 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     } finally {
       setIsSubmitting(false);
     }
+
+    console.log('Form data:', formData);
+    console.log('Is form valid:', Object.values(formData).every(value => value && value.trim()));
   };
 
   const handleClose = () => {
