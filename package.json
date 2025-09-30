@@ -2,6 +2,7 @@
   "name": "task-management-system-fixed",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://itasik2.github.io/todo_erg/",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.8.0",
