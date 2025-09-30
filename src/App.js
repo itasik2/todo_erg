@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { BrowserRouter as Router } from "react-router-dom";
 import "./App.css";
 import { mockAPI } from "./services/api/mock-api";
 import { useNotifications } from "./hooks/useNotifications";
@@ -17,9 +18,6 @@ import SearchPanel from "./components/search/SearchPanel";
 import Pagination from "./components/common/Pagination";
 import ExportButton from "./components/export/ExportButton";
 import NotificationCenter from "./components/common/NotificationCenter";
-
-// Убрали неиспользуемую константу
-// const ADMIN_PASSWORD = "admin123";
 
 function App() {
   // Состояния
@@ -104,7 +102,7 @@ function App() {
   // Обработчики
   const handleFilterChange = useCallback((filter, value) => {
     setSearchFilters((prev) => ({ ...prev, [filter]: value }));
-  }, [setSearchFilters]); // Добавили недостающую зависимость
+  }, [setSearchFilters]);
 
   const handlePageChange = useCallback((page, newItemsPerPage = itemsPerPage) => {
     if (newItemsPerPage !== itemsPerPage) {
@@ -342,127 +340,129 @@ function App() {
   }
 
   return (
-    <div className="app" data-theme={theme}>
-      <audio ref={audioRef} preload="auto" />
+    <Router>
+      <div className="app" data-theme={theme}>
+        <audio ref={audioRef} preload="auto" />
 
-      <Header 
-        user={currentUser} 
-        onLogout={handleLogout} 
-        stats={stats}  
-        extraControls={<ThemeToggle />} 
-      />
+        <Header 
+          user={currentUser} 
+          onLogout={handleLogout} 
+          stats={stats}  
+          extraControls={<ThemeToggle />} 
+        />
 
-      <div className="main-content">
-        {adminMode && (
-          <AssigneeManagement
-            assignees={assignees}    
-            onAdd={addAssignee}
-            onRemove={removeAssignee}
+        <div className="main-content">
+          {adminMode && (
+            <AssigneeManagement
+              assignees={assignees}    
+              onAdd={addAssignee}
+              onRemove={removeAssignee}
+            />
+          )}
+
+          <SearchPanel
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchFilters={searchFilters}
+            onFilterChange={handleFilterChange}
+            onClearSearch={clearSearch}
+            assignees={assignees}
+            hasActiveSearch={hasActiveSearch}
           />
-        )}
 
-        <SearchPanel
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchFilters={searchFilters}
-          onFilterChange={handleFilterChange}
-          onClearSearch={clearSearch}
-          assignees={assignees}
-          hasActiveSearch={hasActiveSearch}
-        />
-
-        <div className="toolbar">
-          <ExportButton tasks={searchResults} />
-          <span className="search-info">
-            {hasActiveSearch && `Найдено: ${searchResults.length} заявок`}
-          </span>
-        </div>
-
-        <div className="filters">
-          <div className="date-filter">
-            <label>Фильтр по дате:</label>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            />
-            <button onClick={() => setDateFilter("")}>Сбросить</button>
+          <div className="toolbar">
+            <ExportButton tasks={searchResults} />
+            <span className="search-info">
+              {hasActiveSearch && `Найдено: ${searchResults.length} заявок`}
+            </span>
           </div>
-          <label className="hide-completed">
-            <input
-              type="checkbox"
-              checked={hideCompleted}
-              onChange={(e) => setHideCompleted(e.target.checked)}
-            />
-            Скрыть выполненные
-          </label>
+
+          <div className="filters">
+            <div className="date-filter">
+              <label>Фильтр по дате:</label>
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              />
+              <button onClick={() => setDateFilter("")}>Сбросить</button>
+            </div>
+            <label className="hide-completed">
+              <input
+                type="checkbox"
+                checked={hideCompleted}
+                onChange={(e) => setHideCompleted(e.target.checked)}
+              />
+              Скрыть выполненные
+            </label>
+          </div>
+
+          <TaskTable
+            tasks={pagination.currentItems}
+            assignees={assignees}
+            adminMode={adminMode}
+            onStatusChange={handleStatusChange}
+            onDelete={deleteTask}
+            formatDateTime={formatDateTime}
+            onAssigneeChange={async (taskId, assignee) => {
+              await updateTask(taskId, { assignee: assignee || null });
+            }}
+          />
+
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+            totalItems={searchResults.length}
+            itemsPerPage={itemsPerPage}
+          />
+
+          <button
+            className="add-task-button"
+            onClick={() => setShowTaskModal(true)}
+          >
+            ➕ Новая заявка
+          </button>
         </div>
 
-        <TaskTable
-          tasks={pagination.currentItems}
+        <NotificationCenter
+          notifications={notifications}
+          onRemove={removeNotification}
+        />
+
+        <TaskModal
+          show={showTaskModal}
+          onClose={() => setShowTaskModal(false)}
+          onSubmit={addTaskFromModal}
           assignees={assignees}
-          adminMode={adminMode}
-          onStatusChange={handleStatusChange}
-          onDelete={deleteTask}
-          formatDateTime={formatDateTime}
-          onAssigneeChange={async (taskId, assignee) => {
-            await updateTask(taskId, { assignee: assignee || null });
-          }}
         />
 
-        <Pagination
-          currentPage={pagination.currentPage}
-          totalPages={pagination.totalPages}
-          onPageChange={handlePageChange}
-          totalItems={searchResults.length}
-          itemsPerPage={itemsPerPage}
-        />
+        <Notification {...notification} />
 
-        <button
-          className="add-task-button"
-          onClick={() => setShowTaskModal(true)}
-        >
-          ➕ Новая заявка
-        </button>
+        <TimeInputModal
+          show={timeModal.show}
+          onClose={() => setTimeModal((prev) => ({ ...prev, show: false }))}
+          hours={timeModal.hours}
+          minutes={timeModal.minutes}
+          error={timeModal.error}
+          onHoursChange={(value) =>
+            setTimeModal((prev) => ({
+              ...prev,
+              hours: Math.max(0, parseInt(value) || 0),
+              error: "",
+            }))
+          }
+          onMinutesChange={(value) =>
+            setTimeModal((prev) => ({
+              ...prev,
+              minutes: Math.max(0, Math.min(59, parseInt(value) || 0)),
+              error: "",
+            }))
+          }
+          onSave={saveTimeSpent}
+        />
       </div>
-
-      <NotificationCenter
-        notifications={notifications}
-        onRemove={removeNotification}
-      />
-
-      <TaskModal
-        show={showTaskModal}
-        onClose={() => setShowTaskModal(false)}
-        onSubmit={addTaskFromModal}
-        assignees={assignees}
-      />
-
-      <Notification {...notification} />
-
-      <TimeInputModal
-        show={timeModal.show}
-        onClose={() => setTimeModal((prev) => ({ ...prev, show: false }))}
-        hours={timeModal.hours}
-        minutes={timeModal.minutes}
-        error={timeModal.error}
-        onHoursChange={(value) =>
-          setTimeModal((prev) => ({
-            ...prev,
-            hours: Math.max(0, parseInt(value) || 0),
-            error: "",
-          }))
-        }
-        onMinutesChange={(value) =>
-          setTimeModal((prev) => ({
-            ...prev,
-            minutes: Math.max(0, Math.min(59, parseInt(value) || 0)),
-            error: "",
-          }))
-        }
-        onSave={saveTimeSpent}
-      />
-    </div>
+    </Router>
   );
 }
 
