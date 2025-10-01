@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo } from 'react';
-import { validateField, validateForm } from '../utils/validation';
 
 export const useForm = (initialState, validationRules) => {
   const [formData, setFormData] = useState(initialState);
@@ -12,37 +11,29 @@ export const useForm = (initialState, validationRules) => {
       ...prev,
       [name]: value
     }));
-
-    if (touched[name]) {
-      const fieldErrors = validateField(name, value, validationRules);
-      setErrors(prev => ({
-        ...prev,
-        [name]: fieldErrors
-      }));
-    }
-  }, [touched, validationRules]);
+  }, []);
 
   const handleBlur = useCallback((name) => {
     setTouched(prev => ({ ...prev, [name]: true }));
+  }, []);
 
-    const fieldErrors = validateField(name, formData[name], validationRules);
-    setErrors(prev => ({
-      ...prev,
-      [name]: fieldErrors
-    }));
-  }, [formData, validationRules]);
-
+  // Упрощенная валидация
   const validateAll = useCallback((fieldsToValidate) => {
-    const allTouched = {};
+    const newErrors = {};
+    
     fieldsToValidate.forEach(field => {
-      allTouched[field] = true;
+      const value = formData[field]?.toString().trim() || '';
+      const rules = validationRules[field];
+      
+      if (rules?.required && !value) {
+        newErrors[field] = ['Обязательное поле'];
+      } else if (rules?.minLength && value.length < rules.minLength) {
+        newErrors[field] = [`Минимум ${rules.minLength} символов`];
+      }
     });
-    setTouched(allTouched);
 
-    const validation = validateForm(formData, fieldsToValidate, validationRules);
-    setErrors(validation.errors);
-
-    return validation.isValid;
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   }, [formData, validationRules]);
 
   const resetForm = useCallback(() => {
@@ -55,7 +46,7 @@ export const useForm = (initialState, validationRules) => {
   const setError = useCallback((field, message) => {
     setErrors(prev => ({
       ...prev,
-      [field]: Array.isArray(message) ? message : [message]
+      [field]: [message]
     }));
   }, []);
 
@@ -67,28 +58,17 @@ export const useForm = (initialState, validationRules) => {
     });
   }, []);
 
-  // Исправленная функция hasErrors - проверяет только реальные ошибки
-  const hasErrors = useMemo(() => {
-    return Object.keys(errors).some(key => {
-      const error = errors[key];
-      // Проверяем, что ошибка существует и не пустая
-      return error && 
-             Array.isArray(error) ? error.length > 0 : Boolean(error);
-    });
-  }, [errors]);
-
-  // Дополнительная функция для проверки валидности формы
-  const isFormValid = useCallback((requiredFields = []) => {
-    // Проверяем, что все обязательные поля заполнены
-    const requiredFieldsFilled = requiredFields.every(
-      field => formData[field] && formData[field].toString().trim()
+  // Упрощенная проверка валидности формы
+  const isFormValid = useMemo(() => {
+    const requiredFields = Object.keys(validationRules).filter(
+      field => validationRules[field]?.required
     );
     
-    // Проверяем, что нет ошибок валидации
-    const noValidationErrors = !hasErrors;
-
-    return requiredFieldsFilled && noValidationErrors;
-  }, [formData, hasErrors]);
+    return requiredFields.every(field => {
+      const value = formData[field]?.toString().trim() || '';
+      return value.length > 0;
+    });
+  }, [formData, validationRules]);
 
   return {
     formData,
@@ -103,7 +83,7 @@ export const useForm = (initialState, validationRules) => {
     setError,
     clearError,
     setFormData,
-    hasErrors,
+    hasErrors: Object.keys(errors).length > 0,
     isFormValid
   };
 };
