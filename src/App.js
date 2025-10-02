@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import "./App.css";
-import { mockAPI } from "./services/api/mock-api";
+//import { mockAPI } from "./services/api/mock-api";
+import { jsonServerAPI } from "./services/api/json-server-api";
 import { useNotifications } from "./hooks/useNotifications";
 import LoginForm from "./components/common/LoginForm";
 import Header from "./components/common/Header";
 import TaskTable from "./components/tasks/TaskTable";
 import TaskModal from "./components/tasks/TaskModal";
-import Notification from "./components/common/Notification";
+//import Notification from "./components/common/Notification";
 import TimeInputModal from "./components/tasks/TimeInputModal";
 import AssigneeManagement from "./components/admin/AssigneeManagement";
 import { usePagination } from "./hooks/usePagination";
@@ -49,20 +50,28 @@ function App() {
   const { theme, toggleTheme } = useTheme();
 
   // Загрузка данных
-  const loadData = useCallback(async () => {
-    try {
-      const [tasksData, assigneesData] = await Promise.all([
-        mockAPI.getTasks(),
-        mockAPI.getAssignees(),
-      ]);
+const loadData = useCallback(async () => {
+  try {
+    console.log('🔄 Загрузка данных с JSON Server...');
+    
+    const [tasksData, assigneesData] = await Promise.all([
+      jsonServerAPI.getTasks(),
+      jsonServerAPI.getAssignees(),
+    ]);
 
-      setTasks(tasksData.tasks || tasksData || []);
-      setAssignees(assigneesData.assignees || assigneesData || []);
-    } catch (error) {
-      console.error("Ошибка загрузки данных:", error);
-      showNotification("Ошибка загрузки данных", "error");
-    }
-  }, [showNotification]);
+    setTasks(tasksData || []);
+    setAssignees(assigneesData || []);
+    
+    console.log('✅ Данные загружены:', {
+      tasks: tasksData.length,
+      assignees: assigneesData.length
+    });
+    
+  } catch (error) {
+    console.error("❌ Ошибка загрузки данных:", error);
+    showNotification("Ошибка загрузки данных", "error");
+  }
+}, [showNotification]);
 
   // Фильтрация задач
   const filteredTasks = useMemo(() => {
@@ -157,42 +166,38 @@ function App() {
   }, [showNotification]);
 
   // Работа с задачами
-  const addTaskFromModal = useCallback(
-    async (formData) => {
-      const requiredFields = ["foreman", "lab", "roomNumber", "description"];
-      const missingFields = requiredFields.filter(
-        (field) => !formData[field]?.trim(),
-      );
+  const addTaskFromModal = useCallback(async (formData) => {
+  const requiredFields = ["foreman", "lab", "roomNumber", "description"];
+  const missingFields = requiredFields.filter(field => !formData[field]?.trim());
 
-      if (missingFields.length > 0) {
-        throw new Error("Заполните все обязательные поля");
-      }
+  if (missingFields.length > 0) {
+    throw new Error("Заполните все обязательные поля");
+  }
 
-      try {
-        const taskData = {
-          ...formData,
-          createdAt: new Date().toISOString(),
-          status: "новая",
-          acceptedAt: null,
-          completedAt: null,
-          timeSpent: null,
-          author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
-        };
+  try {
+    const taskData = {
+      foreman: formData.foreman.trim(),
+      lab: formData.lab.trim(),
+      roomNumber: formData.roomNumber.trim(),
+      description: formData.description.trim(),
+      assignee: formData.assignee || null,
+      priority: formData.priority,
+      status: "новая",
+      acceptedAt: null,
+      completedAt: null,
+      timeSpent: null,
+      author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
+    };
 
-        const newTask = await mockAPI.createTask(taskData);
-        setTasks((prev) => [...prev, newTask]);
-        showNotification("Заявка создана!");
-        return true;
-      } catch (error) {
-        showNotification(
-          error.message || "Ошибка при создании заявки",
-          "error",
-        );
-        throw error;
-      }
-    },
-    [currentUser, showNotification],
-  );
+    const newTask = await jsonServerAPI.createTask(taskData);
+    setTasks(prev => [newTask, ...prev]); // Добавляем в начало
+    showNotification("✅ Заявка создана!");
+    return true;
+  } catch (error) {
+    showNotification(error.message || "Ошибка при создании заявки", "error");
+    throw error;
+  }
+}, [currentUser, showNotification]);
 
   const updateTask = useCallback(async (id, updates) => {
     try {
@@ -376,6 +381,10 @@ function App() {
     <Router>
       <div className="app" data-theme={theme}>
         <audio ref={audioRef} preload="auto" />
+
+        <div className="connection-status online">
+          🌐 Подключено к облачному серверу
+        </div>
 
         <Header 
           user={currentUser} 
