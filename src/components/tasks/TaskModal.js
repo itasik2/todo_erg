@@ -260,7 +260,7 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
             <button 
               type="submit"
               className="submit-button"
-              disabled={isSubmitDisabled}
+              //disabled={isSubmitDisabled}
             >
               {isSubmitting ? 'Создание...' : '✅ Создать заявку'}
             </button>
