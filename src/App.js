@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import "./App.css";
-//import { mockAPI } from "./services/api/mock-api";
 import { jsonServerAPI } from "./services/api/json-server-api";
 import { useNotifications } from "./hooks/useNotifications";
 import LoginForm from "./components/common/LoginForm";
 import Header from "./components/common/Header";
 import TaskTable from "./components/tasks/TaskTable";
 import TaskModal from "./components/tasks/TaskModal";
-//import Notification from "./components/common/Notification";
 import TimeInputModal from "./components/tasks/TimeInputModal";
 import AssigneeManagement from "./components/admin/AssigneeManagement";
 import { usePagination } from "./hooks/usePagination";
@@ -38,6 +36,7 @@ function App() {
     error: "",
   });
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [serverStatus, setServerStatus] = useState('checking');
 
   // Хуки
   const { 
@@ -49,29 +48,65 @@ function App() {
 
   const { theme, toggleTheme } = useTheme();
 
-  // Загрузка данных
-const loadData = useCallback(async () => {
-  try {
-    console.log('🔄 Загрузка данных с JSON Server...');
-    
-    const [tasksData, assigneesData] = await Promise.all([
-      jsonServerAPI.getTasks(),
-      jsonServerAPI.getAssignees(),
-    ]);
+  // Проверка сервера при загрузке
+  useEffect(() => {
+    const checkServer = async () => {
+      try {
+        await jsonServerAPI.getTasks();
+        setServerStatus('online');
+      } catch {
+        setServerStatus('offline');
+      }
+    };
 
-    setTasks(tasksData || []);
-    setAssignees(assigneesData || []);
-    
-    console.log('✅ Данные загружены:', {
-      tasks: tasksData.length,
-      assignees: assigneesData.length
-    });
-    
-  } catch (error) {
-    console.error("❌ Ошибка загрузки данных:", error);
-    showNotification("Ошибка загрузки данных", "error");
-  }
-}, [showNotification]);
+    checkServer();
+  }, []);
+
+  // Загрузка данных при монтировании
+  useEffect(() => {
+    const savedUser = localStorage.getItem("currentUser");
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        setAdminMode(user.isAdmin || false);
+      } catch (e) {
+        console.error("Ошибка при загрузке пользователя:", e);
+        localStorage.removeItem("currentUser");
+      }
+    }
+    loadData();
+  }, []);
+
+  // Загрузка данных
+  const loadData = useCallback(async () => {
+    try {
+      console.log('🚀 Загрузка данных с вашего сервера...');
+      
+      const [tasksData, assigneesData] = await Promise.all([
+        jsonServerAPI.getTasks(),
+        jsonServerAPI.getAssignees(),
+      ]);
+
+      // Сортируем задачи по дате создания (новые сверху)
+      const sortedTasks = tasksData.sort((a, b) => 
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      setTasks(sortedTasks);
+      setAssignees(assigneesData);
+      
+      console.log('✅ Данные успешно загружены!', {
+        tasks: sortedTasks.length,
+        assignees: assigneesData.length
+      });
+      
+    } catch (error) {
+      console.error("❌ Ошибка загрузки данных:", error);
+      showNotification("Ошибка подключения к серверу", "error");
+    }
+  }, [showNotification]);
 
   // Фильтрация задач
   const filteredTasks = useMemo(() => {
@@ -128,30 +163,25 @@ const loadData = useCallback(async () => {
   }, [itemsPerPage, goToPage, setPaginationItemsPerPage]);
 
   // Авторизация
-  const handleLogin = useCallback(
-    (userData, isAdmin = false) => {
-      console.log('Login attempt:', userData, 'isAdmin:', isAdmin);
+  const handleLogin = useCallback((userData, isAdmin = false) => {
+    const user = { 
+      ...userData, 
+      isAdmin, 
+      id: Date.now().toString(),
+      displayName: `${userData.firstName} ${userData.lastName || ''}`.trim()
+    };
+    
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    setAdminMode(isAdmin);
+    localStorage.setItem("currentUser", JSON.stringify(user));
 
-      const user = { 
-        ...userData, 
-        isAdmin, 
-        id: Date.now().toString(),
-        displayName: `${userData.firstName} ${userData.lastName || ''}`.trim()
-      };
+    const welcomeMessage = isAdmin 
+      ? `Добро пожаловать, администратор ${userData.firstName}!` 
+      : `Добро пожаловать, ${userData.firstName}!`;
       
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      setAdminMode(isAdmin);
-      localStorage.setItem("currentUser", JSON.stringify(user));
-
-      const welcomeMessage = isAdmin 
-        ? `Добро пожаловать, администратор ${userData.firstName}!` 
-        : `Добро пожаловать, ${userData.firstName}!`;
-        
-      showNotification(welcomeMessage);
-    },
-    [showNotification]
-  );
+    showNotification(welcomeMessage);
+  }, [showNotification]);
 
   const handleAdminLogin = useCallback((adminData) => {
     handleLogin(adminData, true);
@@ -167,133 +197,123 @@ const loadData = useCallback(async () => {
 
   // Работа с задачами
   const addTaskFromModal = useCallback(async (formData) => {
-  const requiredFields = ["foreman", "lab", "roomNumber", "description"];
-  const missingFields = requiredFields.filter(field => !formData[field]?.trim());
+    const requiredFields = ["foreman", "lab", "roomNumber", "description"];
+    const missingFields = requiredFields.filter(field => !formData[field]?.trim());
 
-  if (missingFields.length > 0) {
-    throw new Error("Заполните все обязательные поля");
-  }
+    if (missingFields.length > 0) {
+      throw new Error("Заполните все обязательные поля");
+    }
 
-  try {
-    const taskData = {
-      foreman: formData.foreman.trim(),
-      lab: formData.lab.trim(),
-      roomNumber: formData.roomNumber.trim(),
-      description: formData.description.trim(),
-      assignee: formData.assignee || null,
-      priority: formData.priority,
-      status: "новая",
-      acceptedAt: null,
-      completedAt: null,
-      timeSpent: null,
-      author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
-    };
+    try {
+      const taskData = {
+        foreman: formData.foreman.trim(),
+        lab: formData.lab.trim(),
+        roomNumber: formData.roomNumber.trim(),
+        description: formData.description.trim(),
+        assignee: formData.assignee || null,
+        priority: formData.priority,
+        status: "новая",
+        acceptedAt: null,
+        completedAt: null,
+        timeSpent: null,
+        author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
+        createdAt: new Date().toISOString()
+      };
 
-    const newTask = await jsonServerAPI.createTask(taskData);
-    setTasks(prev => [newTask, ...prev]); // Добавляем в начало
-    showNotification("✅ Заявка создана!");
-    return true;
-  } catch (error) {
-    showNotification(error.message || "Ошибка при создании заявки", "error");
-    throw error;
-  }
-}, [currentUser, showNotification]);
+      console.log('📝 Отправка данных на сервер...', taskData);
+      
+      const newTask = await jsonServerAPI.createTask(taskData);
+      
+      // Добавляем новую задачу в состояние
+      setTasks(prev => [newTask, ...prev]);
+      
+      showNotification("✅ Заявка успешно создана!");
+      return true;
+    } catch (error) {
+      console.error('❌ Ошибка при создании заявки:', error);
+      showNotification(error.message || "Ошибка при создании заявки", "error");
+      throw error;
+    }
+  }, [currentUser, showNotification]);
 
   const updateTask = useCallback(async (id, updates) => {
     try {
-      const updatedTask = await mockAPI.updateTask(id, updates);
-      setTasks((prev) =>
-        prev.map((task) => (task.id === id ? updatedTask : task)),
-      );
+      const updatedTask = await jsonServerAPI.updateTask(id, updates);
+      setTasks(prev => prev.map(task => task.id === id ? updatedTask : task));
       return updatedTask;
     } catch (error) {
-      console.error("Ошибка при обновлении заявки:", error);
+      console.error("❌ Ошибка при обновлении заявки:", error);
       throw error;
     }
   }, []);
 
-  const deleteTask = useCallback(
-    async (id) => {
-      try {
-        await mockAPI.deleteTask(id);
-        setTasks((prev) => prev.filter((task) => task.id !== id));
-        showNotification("Заявка удалена");
-      } catch (error) {
-        showNotification("Ошибка при удалении заявки", "error");
-      }
-    },
-    [showNotification],
-  );
+  const deleteTask = useCallback(async (id) => {
+    try {
+      await jsonServerAPI.deleteTask(id);
+      setTasks(prev => prev.filter(task => task.id !== id));
+      showNotification("✅ Заявка удалена");
+    } catch (error) {
+      showNotification("❌ Ошибка при удалении заявки", "error");
+    }
+  }, [showNotification]);
 
   // Работа с исполнителями
-  const addAssignee = useCallback(
-    async (assigneeName) => {
-      if (!assigneeName.trim()) {
-        showNotification("Введите имя исполнителя", "error");
-        return;
-      }
+  const addAssignee = useCallback(async (assigneeName) => {
+    if (!assigneeName.trim()) {
+      showNotification("Введите имя исполнителя", "error");
+      return;
+    }
 
-      try {
-        await mockAPI.createAssignee({ name: assigneeName });
-        setAssignees((prev) => [...prev, assigneeName.trim()]);
-        showNotification("Исполнитель добавлен");
-      } catch (error) {
-        showNotification("Ошибка при добавлении исполнителя", "error");
-      }
-    },
-    [showNotification],
-  );
+    try {
+      await jsonServerAPI.createAssignee(assigneeName);
+      // Обновляем список исполнителей
+      const updatedAssignees = await jsonServerAPI.getAssignees();
+      setAssignees(updatedAssignees);
+      showNotification("✅ Исполнитель добавлен");
+    } catch (error) {
+      showNotification("❌ Ошибка при добавлении исполнителя", "error");
+    }
+  }, [showNotification]);
 
-  const removeAssignee = useCallback(
-    async (assignee) => {
-      try {
-        await mockAPI.deleteAssignee(assignee);
-        setAssignees((prev) => prev.filter((a) => a !== assignee));
-        showNotification("Исполнитель удалён");
-      } catch (error) {
-        showNotification("Ошибка при удалении исполнителя", "error");
-      }
-    },
-    [showNotification],
-  );
+  const removeAssignee = useCallback(async (assignee) => {
+    try {
+      await jsonServerAPI.deleteAssignee(assignee);
+      // Обновляем список исполнителей
+      const updatedAssignees = await jsonServerAPI.getAssignees();
+      setAssignees(updatedAssignees);
+      showNotification("✅ Исполнитель удалён");
+    } catch (error) {
+      showNotification("❌ Ошибка при удалении исполнителя", "error");
+    }
+  }, [showNotification]);
 
   // Обработка изменения статуса задачи
-  const handleStatusChange = useCallback(
-    async (taskId, newStatus, currentStatus) => {
-      if (currentStatus === "выполнено" && !adminMode) {
-        showNotification(
-          "Только администратор может изменять выполненные задачи",
-          "error",
-        );
-        return;
-      }
+  const handleStatusChange = useCallback(async (taskId, newStatus, currentStatus) => {
+    if (currentStatus === "выполнено" && !adminMode) {
+      showNotification("Только администратор может изменять выполненные задачи", "error");
+      return;
+    }
 
-      if (newStatus === "выполнено") {
-        setTimeModal({
-          show: true,
-          taskId,
-          hours: 0,
-          minutes: 0,
-          error: "",
-        });
-      } else {
-        const updates = { status: newStatus };
-        if (newStatus === "в работе") {
-          updates.acceptedAt = new Date().toISOString();
-        }
-        await updateTask(taskId, updates);
+    if (newStatus === "выполнено") {
+      setTimeModal({
+        show: true,
+        taskId,
+        hours: 0,
+        minutes: 0,
+        error: "",
+      });
+    } else {
+      const updates = { status: newStatus };
+      if (newStatus === "в работе") {
+        updates.acceptedAt = new Date().toISOString();
       }
-    },
-    [adminMode, showNotification, updateTask],
-  );
+      await updateTask(taskId, updates);
+    }
+  }, [adminMode, showNotification, updateTask]);
 
   // Сохранение времени выполнения
   const saveTimeSpent = useCallback(async () => {
-    if (
-      timeModal.hours < 0 ||
-      timeModal.minutes < 0 ||
-      timeModal.minutes >= 60
-    ) {
+    if (timeModal.hours < 0 || timeModal.minutes < 0 || timeModal.minutes >= 60) {
       setTimeModal((prev) => ({
         ...prev,
         error: "Введите корректное время (часы ≥ 0, 0 ≤ минуты < 60)",
@@ -318,61 +338,32 @@ const loadData = useCallback(async () => {
   }, [timeModal, updateTask]);
 
   // Статистика
-  const stats = useMemo(
-    () => ({
-      total: tasks.length,
-      completed: tasks.filter((t) => t.status === "выполнено").length,
-      inProgress: tasks.filter((t) => t.status === "в работе").length,
-      new: tasks.filter((t) => t.status === "новая").length,
-    }),
-    [tasks],
-  );
+  const stats = useMemo(() => ({
+    total: tasks.length,
+    completed: tasks.filter((t) => t.status === "выполнено").length,
+    inProgress: tasks.filter((t) => t.status === "в работе").length,
+    new: tasks.filter((t) => t.status === "новая").length,
+  }), [tasks]);
 
   // Форматирование даты
   const formatDateTime = useCallback((dateString) => {
     if (!dateString) return "-";
-
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "-";
-
-      return date.toLocaleString("ru-RU", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
+      return isNaN(date.getTime()) ? "-" : date.toLocaleString("ru-RU", {
+        day: "2-digit", month: "2-digit", year: "numeric", 
+        hour: "2-digit", minute: "2-digit"
       });
-    } catch (e) {
+    } catch {
       return "-";
     }
   }, []);
-
-  // Загрузка данных при монтировании
-  useEffect(() => {
-    const savedUser = localStorage.getItem("currentUser");
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        setAdminMode(user.isAdmin || false);
-      } catch (e) {
-        console.error("Ошибка при загрузке пользователя:", e);
-        localStorage.removeItem("currentUser");
-      }
-    }
-    loadData();
-  }, [loadData]);
 
   // Условный рендеринг
   if (!isAuthenticated) {
     return (
       <div className="app" data-theme={theme}>
-        <LoginForm
-          onLogin={handleLogin}
-          onAdminLogin={handleAdminLogin}
-        />
+        <LoginForm onLogin={handleLogin} onAdminLogin={handleAdminLogin} />
       </div>
     );
   }
@@ -382,17 +373,18 @@ const loadData = useCallback(async () => {
       <div className="app" data-theme={theme}>
         <audio ref={audioRef} preload="auto" />
 
-        <div className="connection-status online">
-          🌐 Подключено к облачному серверу
+        {/* Статус подключения */}
+        <div className={`connection-status ${serverStatus === 'online' ? 'online' : 'offline'}`}>
+          {serverStatus === 'online' ? '🌐 Сервер онлайн' : '🔴 Сервер офлайн'}
+          <br />
+          <small>https://todo-erg-api.onrender.com</small>
         </div>
 
         <Header 
           user={currentUser} 
           onLogout={handleLogout} 
           stats={stats}  
-          extraControls={
-            <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          } 
+          extraControls={<ThemeToggle theme={theme} onToggle={toggleTheme} />} 
         />
 
         <div className="main-content">
