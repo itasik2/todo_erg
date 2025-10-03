@@ -48,35 +48,6 @@ function App() {
 
   const { theme, toggleTheme } = useTheme();
 
-  // Загрузка данных
-  const loadData = useCallback(async () => {
-    try {
-      console.log('🚀 Загрузка данных с вашего сервера...');
-      
-      const [tasksData, assigneesData] = await Promise.all([
-        jsonServerAPI.getTasks(),
-        jsonServerAPI.getAssignees(),
-      ]);
-
-      // Сортируем задачи по дате создания (новые сверху)
-      const sortedTasks = tasksData.sort((a, b) => 
-        new Date(b.createdAt) - new Date(a.createdAt)
-      );
-
-      setTasks(sortedTasks);
-      setAssignees(assigneesData);
-      
-      console.log('✅ Данные успешно загружены!', {
-        tasks: sortedTasks.length,
-        assignees: assigneesData.length
-      });
-      
-    } catch (error) {
-      console.error("❌ Ошибка загрузки данных:", error);
-      showNotification("Ошибка подключения к серверу", "error");
-    }
-  }, [showNotification]);
-
   // Проверка сервера при загрузке
   useEffect(() => {
     const checkServer = async () => {
@@ -106,7 +77,36 @@ function App() {
       }
     }
     loadData();
-  }, [loadData]);
+  }, []);
+
+  // Загрузка данных
+  const loadData = useCallback(async () => {
+    try {
+      console.log('🚀 Загрузка данных с вашего сервера...');
+      
+      const [tasksData, assigneesData] = await Promise.all([
+        jsonServerAPI.getTasks(),
+        jsonServerAPI.getAssignees(),
+      ]);
+
+      // Сортируем задачи по дате создания (новые сверху)
+      const sortedTasks = tasksData.sort((a, b) => 
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+
+      setTasks(sortedTasks);
+      setAssignees(assigneesData);
+      
+      console.log('✅ Данные успешно загружены!', {
+        tasks: sortedTasks.length,
+        assignees: assigneesData.length
+      });
+      
+    } catch (error) {
+      console.error("❌ Ошибка загрузки данных:", error);
+      showNotification("Ошибка подключения к серверу", "error");
+    }
+  }, [showNotification]);
 
   // Фильтрация задач
   const filteredTasks = useMemo(() => {
