@@ -52,28 +52,49 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     clearError(name);
   };
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('🔄 Начало отправки формы...');
 
-    // Простая валидация только обязательных полей
+    // Простая валидация
     const requiredFields = ['foreman', 'lab', 'roomNumber', 'description'];
-    const isValid = validateAll(requiredFields);
-
-    if (!isValid) {
+    const missingFields = requiredFields.filter(field => !formData[field]?.trim());
+    
+    if (missingFields.length > 0) {
+      console.log('❌ Не заполнены поля:', missingFields);
+      showNotification('Заполните все обязательные поля', 'error');
       return;
     }
 
+    console.log('✅ Форма валидна, отправляем...', formData);
     setIsSubmitting(true);
 
     try {
       await onSubmit(formData);
+      console.log('🎉 Заявка успешно отправлена!');
       onClose();
     } catch (error) {
-      setError('submit', error.message || 'Произошла ошибка при создании заявки');
+      console.error('❌ Ошибка отправки:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Упрощенная проверка активности кнопки
+  const isSubmitDisabled = isSubmitting || 
+    !formData.foreman?.trim() || 
+    !formData.lab?.trim() || 
+    !formData.roomNumber?.trim() || 
+    !formData.description?.trim();
+
+  console.log('🔘 Статус кнопки:', {
+    isSubmitting,
+    foreman: !!formData.foreman?.trim(),
+    lab: !!formData.lab?.trim(), 
+    roomNumber: !!formData.roomNumber?.trim(),
+    description: !!formData.description?.trim(),
+    isSubmitDisabled
+  });
 
   const handleClose = () => {
     if (!isSubmitting) {
