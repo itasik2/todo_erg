@@ -77,9 +77,9 @@ const LoginForm = ({ onLogin, onAdminLogin }) => {
   };
 
   // Проверяем возможность отправки формы
-  const canSubmit = isAdminLogin 
-    ? formData.password.trim() && !isSubmitting
-    : formData.firstName.trim() && !isSubmitting;
+  //const canSubmit = isAdminLogin 
+   // ? formData.password.trim() && !isSubmitting
+    //: formData.firstName.trim() && !isSubmitting;
 
   return (
     <div className="login-container">
@@ -124,7 +124,11 @@ const LoginForm = ({ onLogin, onAdminLogin }) => {
               <button 
                 type="submit" 
                 className="login-button" 
-                disabled={!formData.firstName.trim() || isSubmitting}
+                disabled={
+                  isAdminLogin 
+                    ? !formData.password.trim() || isSubmitting
+                    : !formData.firstName.trim() || isSubmitting
+                }
               >
                 {isSubmitting ? 'Вход...' : 'Войти'}
               </button>
