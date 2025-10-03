@@ -385,12 +385,13 @@ const handleAdminLogin = useCallback((adminData) => {
           <small>https://todo-erg-api.onrender.com</small>
         </div>
 
-        <Header 
-          user={currentUser} 
-          onLogout={handleLogout} 
-          stats={stats}  
-          extraControls={<ThemeToggle theme={theme} onToggle={toggleTheme} />} 
-        />
+          <Header 
+            user={currentUser} 
+            onLogout={handleLogout} 
+            stats={stats}  
+            extraControls={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
+            adminMode={adminMode} // Добавьте эту строку
+          />
 
         <div className="main-content">
           {adminMode && (
