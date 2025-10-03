@@ -62,7 +62,7 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     
     if (missingFields.length > 0) {
       console.log('❌ Не заполнены поля:', missingFields);
-      showNotification('Заполните все обязательные поля', 'error');
+      //showNotification('Заполните все обязательные поля', 'error');
       return;
     }
 
