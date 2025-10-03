@@ -107,7 +107,7 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
   };
 
   // Упрощенная проверка - только обязательные поля заполнены
-  const isSubmitDisabled = isSubmitting || !isFormValid;
+  //const isSubmitDisabled = isSubmitting || !isFormValid;
 
   if (!show) return null;
 
