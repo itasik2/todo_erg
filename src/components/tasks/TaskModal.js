@@ -16,15 +16,13 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
   const {
     formData,
     errors,
+    touched,
     isSubmitting,
     setIsSubmitting,
     handleChange,
     handleBlur,
-    validateAll,
     resetForm,
-    setError,
     clearError,
-    isFormValid
   } = useForm(initialFormState, validationRules);
 
   const formRef = useRef(null);
@@ -52,7 +50,7 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     clearError(name);
   };
 
- const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('🔄 Начало отправки формы...');
 
@@ -62,7 +60,6 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     
     if (missingFields.length > 0) {
       console.log('❌ Не заполнены поля:', missingFields);
-      //showNotification('Заполните все обязательные поля', 'error');
       return;
     }
 
@@ -80,22 +77,6 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     }
   };
 
-  // Упрощенная проверка активности кнопки
-  const isSubmitDisabled = isSubmitting || 
-    !formData.foreman?.trim() || 
-    !formData.lab?.trim() || 
-    !formData.roomNumber?.trim() || 
-    !formData.description?.trim();
-
-  console.log('🔘 Статус кнопки:', {
-    isSubmitting,
-    foreman: !!formData.foreman?.trim(),
-    lab: !!formData.lab?.trim(), 
-    roomNumber: !!formData.roomNumber?.trim(),
-    description: !!formData.description?.trim(),
-    isSubmitDisabled
-  });
-
   const handleClose = () => {
     if (!isSubmitting) {
       onClose();
@@ -106,8 +87,12 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     return errors[fieldName] ? 'form-input error' : 'form-input';
   };
 
-  // Упрощенная проверка - только обязательные поля заполнены
-  //const isSubmitDisabled = isSubmitting || !isFormValid;
+  // Упрощенная проверка активности кнопки
+  const isSubmitDisabled = isSubmitting || 
+    !formData.foreman?.trim() || 
+    !formData.lab?.trim() || 
+    !formData.roomNumber?.trim() || 
+    !formData.description?.trim();
 
   if (!show) return null;
 
@@ -132,12 +117,6 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
         </div>
 
         <div className="modal-body">
-          {errors.submit && (
-            <div className="submit-error">
-              ⚠️ {errors.submit}
-            </div>
-          )}
-
           <div className="form-row">
             <div className="form-group">
               <label className="required">Ф.И.О. Бригадира</label>
@@ -259,8 +238,8 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
             </button>
             <button 
               type="submit"
-              className="submit-button"
-              //disabled={isSubmitDisabled}
+              className={`submit-button ${isSubmitDisabled ? 'disabled' : ''}`}
+              disabled={isSubmitDisabled}
             >
               {isSubmitting ? 'Создание...' : '✅ Создать заявку'}
             </button>
