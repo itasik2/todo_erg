@@ -108,8 +108,6 @@ function App() {
     loadData();
   }, [loadData]); // ✅ Добавлен loadData в зависимости
 
-  // ... остальной код без изменений ...
-
   // Фильтрация задач
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -165,29 +163,34 @@ function App() {
   }, [itemsPerPage, goToPage, setPaginationItemsPerPage]);
 
   // Авторизация
-  const handleLogin = useCallback((userData, isAdmin = false) => {
-    const user = { 
-      ...userData, 
-      isAdmin, 
-      id: Date.now().toString(),
-      displayName: `${userData.firstName} ${userData.lastName || ''}`.trim()
-    };
+// В функции handleLogin
+const handleLogin = useCallback((userData, isAdmin = false) => {
+  const user = { 
+    ...userData, 
+    isAdmin, 
+    id: Date.now().toString(),
+    displayName: `${userData.firstName} ${userData.lastName || ''}`.trim()
+  };
+  
+  console.log('🔐 Вход пользователя:', user); // Добавьте логирование
+  
+  setCurrentUser(user);
+  setIsAuthenticated(true);
+  setAdminMode(isAdmin);
+  localStorage.setItem("currentUser", JSON.stringify(user));
+
+  const welcomeMessage = isAdmin 
+    ? `Добро пожаловать, администратор ${userData.firstName}!` 
+    : `Добро пожаловать, ${userData.firstName}!`;
     
-    setCurrentUser(user);
-    setIsAuthenticated(true);
-    setAdminMode(isAdmin);
-    localStorage.setItem("currentUser", JSON.stringify(user));
+  showNotification(welcomeMessage);
+}, [showNotification]);
 
-    const welcomeMessage = isAdmin 
-      ? `Добро пожаловать, администратор ${userData.firstName}!` 
-      : `Добро пожаловать, ${userData.firstName}!`;
-      
-    showNotification(welcomeMessage);
-  }, [showNotification]);
-
-  const handleAdminLogin = useCallback((adminData) => {
-    handleLogin(adminData, true);
-  }, [handleLogin]);
+// В функции handleAdminLogin
+const handleAdminLogin = useCallback((adminData) => {
+  console.log('👑 Попытка входа администратора:', adminData); // Добавьте логирование
+  handleLogin(adminData, true);
+}, [handleLogin]);
 
   const handleLogout = useCallback(() => {
     setIsAuthenticated(false);
