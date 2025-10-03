@@ -15,12 +15,16 @@ const Header = ({ user, onLogout, stats }) => {
           </div>
         </div>
         <div className="header-right">
-          <span className="user-info">
-            {user.firstName} {user.lastName} {user.isAdmin && "(Admin)"}
-          </span>
-          <button onClick={onLogout} className="logout-button">
-            Выйти
-          </button>
+          // Добавьте отладочную информацию
+          <div className="user-info">
+            <span>
+              {user.displayName} 
+              {adminMode && <strong style={{color: 'red', marginLeft: '10px'}}>👑 АДМИНИСТРАТОР</strong>}
+            </span>
+            <button onClick={onLogout} className="logout-button">
+              Выйти
+            </button>
+          </div>
         </div>
       </div>
     </header>
