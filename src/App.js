@@ -201,57 +201,47 @@ const handleAdminLogin = useCallback((adminData) => {
   }, [showNotification]);
 
   // Работа с задачами
-  const addTaskFromModal = useCallback(async (formData) => {
-    const requiredFields = ["foreman", "lab", "roomNumber", "description"];
-    const missingFields = requiredFields.filter(field => !formData[field]?.trim());
+ // В функции addTaskFromModal обновите создание задачи:
+const addTaskFromModal = useCallback(async (formData) => {
+  const requiredFields = ["foreman", "lab", "roomNumber", "description"];
+  const missingFields = requiredFields.filter(field => !formData[field]?.trim());
 
-    if (missingFields.length > 0) {
-      throw new Error("Заполните все обязательные поля");
-    }
+  if (missingFields.length > 0) {
+    throw new Error("Заполните все обязательные поля");
+  }
 
-    try {
-      const taskData = {
-        foreman: formData.foreman.trim(),
-        lab: formData.lab.trim(),
-        roomNumber: formData.roomNumber.trim(),
-        description: formData.description.trim(),
-        assignee: formData.assignee || null,
-        priority: formData.priority,
-        status: "новая",
-        acceptedAt: null,
-        completedAt: null,
-        timeSpent: null,
-        author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
-        createdAt: new Date().toISOString()
-      };
+  try {
+    const taskData = {
+      foreman: formData.foreman.trim(),
+      lab: formData.lab.trim(),
+      roomNumber: formData.roomNumber.trim(),
+      description: formData.description.trim(),
+      assignee: formData.assignee || null,
+      priority: formData.priority,
+      department: formData.department || 'general', // Добавлено поле подразделения
+      status: "новая",
+      acceptedAt: null,
+      completedAt: null,
+      timeSpent: null,
+      author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
+      createdAt: new Date().toISOString()
+    };
 
-      console.log('📝 Отправка данных на сервер...', taskData);
-      
-      const newTask = await jsonServerAPI.createTask(taskData);
-      
-      // Добавляем новую задачу в состояние
-      setTasks(prev => [newTask, ...prev]);
-      
-      showNotification("✅ Заявка успешно создана!");
-      return true;
-    } catch (error) {
-      console.error('❌ Ошибка при создании заявки:', error);
-      showNotification(error.message || "Ошибка при создании заявки", "error");
-      throw error;
-    }
-  }, [currentUser, showNotification]);
-
-  const updateTask = useCallback(async (id, updates) => {
-    try {
-      const updatedTask = await jsonServerAPI.updateTask(id, updates);
-      setTasks(prev => prev.map(task => task.id === id ? updatedTask : task));
-      return updatedTask;
-    } catch (error) {
-      console.error("❌ Ошибка при обновлении заявки:", error);
-      throw error;
-    }
-  }, []);
-
+    console.log('📝 Отправка данных на сервер...', taskData);
+    
+    const newTask = await jsonServerAPI.createTask(taskData);
+    
+    setTasks(prev => [newTask, ...prev]);
+    
+    showNotification("✅ Заявка успешно создана!");
+    return true;
+  } catch (error) {
+    console.error('❌ Ошибка при создании заявки:', error);
+    showNotification(error.message || "Ошибка при создании заявки", "error");
+    throw error;
+  }
+}, [currentUser, showNotification]);
+  
   const deleteTask = useCallback(async (id) => {
     try {
       await jsonServerAPI.deleteTask(id);
