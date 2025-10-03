@@ -16,14 +16,13 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
   const {
     formData,
     errors,
-    touched,
     isSubmitting,
     setIsSubmitting,
     handleChange,
     handleBlur,
     resetForm,
     clearError,
-  } = useForm(initialFormState, validationRules);
+  } = useForm(initialFormState, validationRules); // Убрали неиспользуемую переменную touched
 
   const formRef = useRef(null);
   const firstInputRef = useRef(null);
