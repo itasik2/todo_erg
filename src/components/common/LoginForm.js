@@ -1,188 +1,122 @@
-import React, { useState } from "react";
-import "./LoginForm.css";
+import React, { useState } from 'react';
+import './LoginForm.css';
 
 const LoginForm = ({ onLogin, onAdminLogin }) => {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    password: "",
-  });
   const [isAdminLogin, setIsAdminLogin] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    password: ''
+  });
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "Введите имя";
-    }
-
-    if (isAdminLogin) {
-      if (!formData.password) {
-        newErrors.password = "Введите пароль";
-      } else if (formData.password !== "admin123") {
-        newErrors.password = "Неверный пароль администратора";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setErrors({});
-
-    if (!validateForm()) {
+    
+    if (!formData.firstName.trim()) {
+      alert('Введите имя');
       return;
     }
 
-    setIsSubmitting(true);
+    if (isAdminLogin && !formData.password) {
+      alert('Введите пароль администратора');
+      return;
+    }
 
-    try {
-      if (isAdminLogin) {
-        await onAdminLogin(formData);
+    // Простая проверка пароля администратора
+    if (isAdminLogin) {
+      if (formData.password === 'admin123') { // Стандартный пароль
+        onAdminLogin(formData);
       } else {
-        await onLogin(formData);
+        alert('Неверный пароль администратора');
+        return;
       }
-    } catch (error) {
-      setErrors({ submit: error.message || "Ошибка при входе в систему" });
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      onLogin(formData);
     }
   };
-
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Очищаем ошибку при вводе
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
-    }
-    if (errors.submit) {
-      setErrors(prev => ({ ...prev, submit: "" }));
-    }
-  };
-
-  const switchToAdmin = () => {
-    setIsAdminLogin(true);
-    setErrors({});
-    setFormData(prev => ({ ...prev, password: "" }));
-  };
-
-  const switchToUser = () => {
-    setIsAdminLogin(false);
-    setErrors({});
-    setFormData(prev => ({ ...prev, password: "" }));
-  };
-
-  // Проверяем возможность отправки формы
-  //const canSubmit = isAdminLogin 
-   // ? formData.password.trim() && !isSubmitting
-    //: formData.firstName.trim() && !isSubmitting;
 
   return (
     <div className="login-container">
       <div className="login-form">
-        <h1>🔐 Авторизация</h1>
+        <h2>Вход в систему</h2>
         
-        {/* Общие ошибки */}
-        {errors.submit && (
-          <div className="error-message submit-error">
-            {errors.submit}
-          </div>
-        )}
+        <div className="login-toggle">
+          <button
+            type="button"
+            className={!isAdminLogin ? 'active' : ''}
+            onClick={() => setIsAdminLogin(false)}
+          >
+            Обычный пользователь
+          </button>
+          <button
+            type="button"
+            className={isAdminLogin ? 'active' : ''}
+            onClick={() => setIsAdminLogin(true)}
+          >
+            Администратор
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit}>
-          {!isAdminLogin ? (
-            <>
-              <div className="form-group">
-                <input
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  placeholder="Имя"
-                  className={errors.firstName ? 'error' : ''}
-                  disabled={isSubmitting}
-                  autoFocus
-                />
-                {errors.firstName && (
-                  <div className="field-error">{errors.firstName}</div>
-                )}
-              </div>
-              
-              <div className="form-group">
-                <input
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  placeholder="Фамилия (необязательно)"
-                  disabled={isSubmitting}
-                />
-              </div>
-              
-              <button 
-                type="submit" 
-                className="login-button" 
-                disabled={
-                  isAdminLogin 
-                    ? !formData.password.trim() || isSubmitting
-                    : !formData.firstName.trim() || isSubmitting
-                }
-              >
-                {isSubmitting ? 'Вход...' : 'Войти'}
-              </button>
-              
-              <button 
-                type="button"
-                onClick={switchToAdmin}
-                className="admin-login-button"
-                disabled={isSubmitting}
-              >
-                Войти как администратор
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="form-group">
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  placeholder="Пароль администратора"
-                  className={errors.password ? 'error' : ''}
-                  disabled={isSubmitting}
-                  autoFocus
-                />
-                {errors.password && (
-                  <div className="field-error">{errors.password}</div>
-                )}
-              </div>
-              
-              <button 
-                type="submit" 
-                className="login-button" 
-                disabled={!formData.password.trim() || isSubmitting}
-              >
-                {isSubmitting ? 'Вход...' : 'Войти как админ'}
-              </button>
-              
-              <button 
-                type="button"
-                onClick={switchToUser}
-                className="cancel-button"
-                disabled={isSubmitting}
-              >
-                Отмена
-              </button>
+          <div className="form-group">
+            <label>Имя *</label>
+            <input
+              type="text"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleChange}
+              placeholder="Введите ваше имя"
+              required
+            />
+          </div>
 
-              {/* Подсказка для тестирования */}
-              <div className="admin-hint">
-                Подсказка: пароль - <strong>admin123</strong>
-              </div>
-            </>
+          <div className="form-group">
+            <label>Фамилия</label>
+            <input
+              type="text"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              placeholder="Введите вашу фамилию"
+            />
+          </div>
+
+          {isAdminLogin && (
+            <div className="form-group">
+              <label>Пароль администратора *</label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Введите пароль"
+                required
+              />
+              <small className="password-hint">
+                Стандартный пароль: admin123
+              </small>
+            </div>
           )}
+
+          <button type="submit" className="login-button">
+            {isAdminLogin ? 'Войти как администратор' : 'Войти'}
+          </button>
         </form>
+
+        {isAdminLogin && (
+          <div className="admin-info">
+            <p><strong>Для тестирования:</strong></p>
+            <p>Пароль: <code>admin123</code></p>
+          </div>
+        )}
       </div>
     </div>
   );
