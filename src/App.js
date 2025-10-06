@@ -41,8 +41,6 @@ function App() {
   const [serverStatus, setServerStatus] = useState('checking');
   const [activeDepartment, setActiveDepartment] = useState('all');
 
-  
-
   // Хуки
   const { 
     notifications, 
@@ -111,62 +109,70 @@ function App() {
       }
     }
     loadData();
-  }, [loadData]); // ✅ Добавлен loadData в зависимости
+  }, [loadData]);
 
   // Фильтрация задач
-const filteredTasks = useMemo(() => {
-  return tasks.filter((task) => {
-    const matchesDate =
-      !dateFilter ||
-      new Date(task.createdAt).toLocaleDateString() ===
-        new Date(dateFilter).toLocaleDateString();
-    const matchesHideCompleted =
-      !hideCompleted || task.status !== "выполнено";
-    const matchesDepartment = 
-      activeDepartment === 'all' || task.department === activeDepartment;
-    
-    return matchesDate && matchesHideCompleted && matchesDepartment;
-  });
-}, [tasks, dateFilter, hideCompleted, activeDepartment]);
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const matchesDate =
+        !dateFilter ||
+        new Date(task.createdAt).toLocaleDateString() ===
+          new Date(dateFilter).toLocaleDateString();
+      const matchesHideCompleted =
+        !hideCompleted || task.status !== "выполнено";
+      const matchesDepartment = 
+        activeDepartment === 'all' || task.department === activeDepartment;
+      
+      return matchesDate && matchesHideCompleted && matchesDepartment;
+    });
+  }, [tasks, dateFilter, hideCompleted, activeDepartment]);
 
-  console.log(`📧 Отправка отчета на ${email} с периодом: ${period}`);
-  
-  // Данные для отчета
-  const reportData = {
-    total: tasks.length,
-    new: tasks.filter(t => t.status === 'новая').length,
-    inProgress: tasks.filter(t => t.status === 'в работе').length,
-    completed: tasks.filter(t => t.status === 'выполнено').length,
-    departments: {
+  // Функция для email экспорта
+  const handleEmailExport = useCallback(async (email, period) => {
+    try {
+      console.log(`📧 Отправка отчета на ${email} с периодом: ${period}`);
+      
+      // Данные для отчета
+      const reportData = {
+        total: tasks.length,
+        new: tasks.filter(t => t.status === 'новая').length,
+        inProgress: tasks.filter(t => t.status === 'в работе').length,
+        completed: tasks.filter(t => t.status === 'выполнено').length,
+        departments: {
+          general: tasks.filter(t => t.department === 'general').length,
+          plumber: tasks.filter(t => t.department === 'plumber').length,
+          electrician: tasks.filter(t => t.department === 'electrician').length,
+          adjustment: tasks.filter(t => t.department === 'adjustment').length
+        },
+        tasks: tasks,
+        generatedAt: new Date().toISOString()
+      };
+      
+      // В реальном приложении здесь будет API вызов для отправки email
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Имитация задержки
+      
+      showNotification(`Отчет отправлен на ${email}`, 'success');
+      
+      return reportData;
+    } catch (error) {
+      console.error('❌ Ошибка при отправке отчета:', error);
+      showNotification('Ошибка при отправке отчета', 'error');
+      throw error;
+    }
+  }, [tasks, showNotification]);
+
+  // Добавьте статистику по подразделениям
+  const departmentStats = useMemo(() => {
+    const stats = {
+      all: tasks.length,
       general: tasks.filter(t => t.department === 'general').length,
       plumber: tasks.filter(t => t.department === 'plumber').length,
       electrician: tasks.filter(t => t.department === 'electrician').length,
       adjustment: tasks.filter(t => t.department === 'adjustment').length
-    },
-    tasks: tasks,
-    generatedAt: new Date().toISOString()
-  };
-  
-  // В реальном приложении здесь будет API вызов для отправки email
-  await new Promise(resolve => setTimeout(resolve, 2000)); // Имитация задержки
-  
-  showNotification(`Отчет отправлен на ${email}`, 'success');
-  
-  return reportData;
-}, [tasks, showNotification]);
-
-// Добавьте статистику по подразделениям
-const departmentStats = useMemo(() => {
-  const stats = {
-    all: tasks.length,
-    general: tasks.filter(t => t.department === 'general').length,
-    plumber: tasks.filter(t => t.department === 'plumber').length,
-    electrician: tasks.filter(t => t.department === 'electrician').length,
-    adjustment: tasks.filter(t => t.department === 'adjustment').length
-  };
-  
-  return stats;
-}, [tasks]);
+    };
+    
+    return stats;
+  }, [tasks]);
 
   // Поиск и фильтрация
   const searchableFields = [
@@ -210,34 +216,32 @@ const departmentStats = useMemo(() => {
   }, [itemsPerPage, goToPage, setPaginationItemsPerPage]);
 
   // Авторизация
-// В функции handleLogin
-const handleLogin = useCallback((userData, isAdmin = false) => {
-  const user = { 
-    ...userData, 
-    isAdmin, 
-    id: Date.now().toString(),
-    displayName: `${userData.firstName} ${userData.lastName || ''}`.trim()
-  };
-  
-  console.log('🔐 Вход пользователя:', user); // Добавьте логирование
-  
-  setCurrentUser(user);
-  setIsAuthenticated(true);
-  setAdminMode(isAdmin);
-  localStorage.setItem("currentUser", JSON.stringify(user));
-
-  const welcomeMessage = isAdmin 
-    ? `Добро пожаловать, администратор ${userData.firstName}!` 
-    : `Добро пожаловать, ${userData.firstName}!`;
+  const handleLogin = useCallback((userData, isAdmin = false) => {
+    const user = { 
+      ...userData, 
+      isAdmin, 
+      id: Date.now().toString(),
+      displayName: `${userData.firstName} ${userData.lastName || ''}`.trim()
+    };
     
-  showNotification(welcomeMessage);
-}, [showNotification]);
+    console.log('🔐 Вход пользователя:', user);
+    
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    setAdminMode(isAdmin);
+    localStorage.setItem("currentUser", JSON.stringify(user));
 
-// В функции handleAdminLogin
-const handleAdminLogin = useCallback((adminData) => {
-  console.log('👑 Попытка входа администратора:', adminData); // Добавьте логирование
-  handleLogin(adminData, true);
-}, [handleLogin]);
+    const welcomeMessage = isAdmin 
+      ? `Добро пожаловать, администратор ${userData.firstName}!` 
+      : `Добро пожаловать, ${userData.firstName}!`;
+      
+    showNotification(welcomeMessage);
+  }, [showNotification]);
+
+  const handleAdminLogin = useCallback((adminData) => {
+    console.log('👑 Попытка входа администратора:', adminData);
+    handleLogin(adminData, true);
+  }, [handleLogin]);
 
   const handleLogout = useCallback(() => {
     setIsAuthenticated(false);
@@ -248,45 +252,56 @@ const handleAdminLogin = useCallback((adminData) => {
   }, [showNotification]);
 
   // Работа с задачами
-const addTaskFromModal = useCallback(async (formData) => {
-  const requiredFields = ["foreman", "lab", "roomNumber", "description"];
-  const missingFields = requiredFields.filter(field => !formData[field]?.trim());
+  const updateTask = useCallback(async (id, updates) => {
+    try {
+      const updatedTask = await jsonServerAPI.updateTask(id, updates);
+      setTasks(prev => prev.map(task => task.id === id ? updatedTask : task));
+      return updatedTask;
+    } catch (error) {
+      console.error("❌ Ошибка при обновлении заявки:", error);
+      throw error;
+    }
+  }, []);
 
-  if (missingFields.length > 0) {
-    throw new Error("Заполните все обязательные поля");
-  }
+  const addTaskFromModal = useCallback(async (formData) => {
+    const requiredFields = ["foreman", "lab", "roomNumber", "description"];
+    const missingFields = requiredFields.filter(field => !formData[field]?.trim());
 
-  try {
-    const taskData = {
-      foreman: formData.foreman.trim(),
-      lab: formData.lab.trim(),
-      roomNumber: formData.roomNumber.trim(),
-      description: formData.description.trim(),
-      assignee: formData.assignee || null,
-      priority: formData.priority,
-      department: formData.department || 'general', // Добавлено поле подразделения
-      status: "новая",
-      acceptedAt: null,
-      completedAt: null,
-      timeSpent: null,
-      author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
-      createdAt: new Date().toISOString()
-    };
+    if (missingFields.length > 0) {
+      throw new Error("Заполните все обязательные поля");
+    }
 
-    console.log('📝 Отправка данных на сервер...', taskData);
-    
-    const newTask = await jsonServerAPI.createTask(taskData);
-    
-    setTasks(prev => [newTask, ...prev]);
-    
-    showNotification("✅ Заявка успешно создана!");
-    return true;
-  } catch (error) {
-    console.error('❌ Ошибка при создании заявки:', error);
-    showNotification(error.message || "Ошибка при создании заявки", "error");
-    throw error;
-  }
-}, [currentUser, showNotification]);
+    try {
+      const taskData = {
+        foreman: formData.foreman.trim(),
+        lab: formData.lab.trim(),
+        roomNumber: formData.roomNumber.trim(),
+        description: formData.description.trim(),
+        assignee: formData.assignee || null,
+        priority: formData.priority,
+        department: formData.department || 'general',
+        status: "новая",
+        acceptedAt: null,
+        completedAt: null,
+        timeSpent: null,
+        author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
+        createdAt: new Date().toISOString()
+      };
+
+      console.log('📝 Отправка данных на сервер...', taskData);
+      
+      const newTask = await jsonServerAPI.createTask(taskData);
+      
+      setTasks(prev => [newTask, ...prev]);
+      
+      showNotification("✅ Заявка успешно создана!");
+      return true;
+    } catch (error) {
+      console.error('❌ Ошибка при создании заявки:', error);
+      showNotification(error.message || "Ошибка при создании заявки", "error");
+      throw error;
+    }
+  }, [currentUser, showNotification]);
   
   const deleteTask = useCallback(async (id) => {
     try {
@@ -421,25 +436,27 @@ const addTaskFromModal = useCallback(async (formData) => {
           <small>https://todo-erg-api.onrender.com</small>
         </div>
 
-          <Header 
-            user={currentUser} 
-            onLogout={handleLogout} 
-            stats={stats}  
-            extraControls={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
-            adminMode={adminMode} // Добавьте эту строку
-          />
+        <Header 
+          user={currentUser} 
+          onLogout={handleLogout} 
+          stats={stats}  
+          extraControls={<ThemeToggle theme={theme} onToggle={toggleTheme} />}
+          adminMode={adminMode}
+        />
 
         <div className="main-content">
           {adminMode && (
-            <AssigneeManagement
-              assignees={assignees}    
-              onAdd={addAssignee}
-              onRemove={removeAssignee}
-            />
-          <EmailExport 
-            tasks={tasks} 
-            onExport={handleEmailExport}
-          />
+            <>
+              <AssigneeManagement
+                assignees={assignees}    
+                onAdd={addAssignee}
+                onRemove={removeAssignee}
+              />
+              <EmailExport 
+                tasks={tasks} 
+                onExport={handleEmailExport}
+              />
+            </>
           )}
 
           <SearchPanel
@@ -453,8 +470,8 @@ const addTaskFromModal = useCallback(async (formData) => {
           />
 
           <DepartmentTabs
-          activeDepartment={activeDepartment}
-          onDepartmentChange={setActiveDepartment}
+            activeDepartment={activeDepartment}
+            onDepartmentChange={setActiveDepartment}
           />
 
           <div className="toolbar">
@@ -464,15 +481,15 @@ const addTaskFromModal = useCallback(async (formData) => {
                 Найдено: {searchResults.length} заявок
               </span>
             )}
-             <span className="department-info">
-            {activeDepartment !== 'all' && 
-              `Подразделение: ${
-                activeDepartment === 'general' ? '🏢 Общие' :
-                activeDepartment === 'plumber' ? '🔧 Сантехник' :
-                activeDepartment === 'electrician' ? '⚡ Электрик' : '🛠️ Наладка'
-              } (${departmentStats[activeDepartment]})`
-            }
-          </span>
+            <span className="department-info">
+              {activeDepartment !== 'all' && 
+                `Подразделение: ${
+                  activeDepartment === 'general' ? '🏢 Общие' :
+                  activeDepartment === 'plumber' ? '🔧 Сантехник' :
+                  activeDepartment === 'electrician' ? '⚡ Электрик' : '🛠️ Наладка'
+                } (${departmentStats[activeDepartment]})`
+              }
+            </span>
           </div>
 
           <div className="filters">
@@ -541,7 +558,6 @@ const addTaskFromModal = useCallback(async (formData) => {
           show={showTaskModal}
           onClose={() => setShowTaskModal(false)}
           onSubmit={addTaskFromModal}
-         
         />
 
         <TimeInputModal
