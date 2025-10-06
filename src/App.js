@@ -18,6 +18,7 @@ import Pagination from "./components/common/Pagination";
 import ExportButton from "./components/export/ExportButton";
 import NotificationCenter from "./components/common/NotificationCenter";
 import DepartmentTabs from './components/tasks/DepartmentTabs';
+import EmailExport from './components/export/EmailExport';
 
 function App() {
   // Состояния
@@ -39,6 +40,8 @@ function App() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [serverStatus, setServerStatus] = useState('checking');
   const [activeDepartment, setActiveDepartment] = useState('all');
+
+  
 
   // Хуки
   const { 
@@ -125,6 +128,32 @@ const filteredTasks = useMemo(() => {
     return matchesDate && matchesHideCompleted && matchesDepartment;
   });
 }, [tasks, dateFilter, hideCompleted, activeDepartment]);
+
+  console.log(`📧 Отправка отчета на ${email} с периодом: ${period}`);
+  
+  // Данные для отчета
+  const reportData = {
+    total: tasks.length,
+    new: tasks.filter(t => t.status === 'новая').length,
+    inProgress: tasks.filter(t => t.status === 'в работе').length,
+    completed: tasks.filter(t => t.status === 'выполнено').length,
+    departments: {
+      general: tasks.filter(t => t.department === 'general').length,
+      plumber: tasks.filter(t => t.department === 'plumber').length,
+      electrician: tasks.filter(t => t.department === 'electrician').length,
+      adjustment: tasks.filter(t => t.department === 'adjustment').length
+    },
+    tasks: tasks,
+    generatedAt: new Date().toISOString()
+  };
+  
+  // В реальном приложении здесь будет API вызов для отправки email
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Имитация задержки
+  
+  showNotification(`Отчет отправлен на ${email}`, 'success');
+  
+  return reportData;
+}, [tasks, showNotification]);
 
 // Добавьте статистику по подразделениям
 const departmentStats = useMemo(() => {
@@ -407,6 +436,10 @@ const addTaskFromModal = useCallback(async (formData) => {
               onAdd={addAssignee}
               onRemove={removeAssignee}
             />
+          <EmailExport 
+            tasks={tasks} 
+            onExport={handleEmailExport}
+          />
           )}
 
           <SearchPanel
