@@ -250,8 +250,7 @@ function App() {
     showNotification("Вы вышли из системы");
   }, [showNotification]);
 
-  // Работа с задачами
-  // Работа с задачами
+// Работа с задачами
 const updateTask = useCallback(async (id, updates) => {
   try {
     // Получаем текущую задачу чтобы сохранить все данные
@@ -363,6 +362,39 @@ const handleStatusChange = useCallback(async (taskId, newStatus, currentStatus) 
     showNotification('Ошибка при изменении статуса', 'error');
   }
 }, [adminMode, showNotification, updateTask]);
+
+// Сохранение времени выполнения
+const saveTimeSpent = useCallback(async () => {
+  if (timeModal.hours < 0 || timeModal.minutes < 0 || timeModal.minutes >= 60) {
+    setTimeModal((prev) => ({
+      ...prev,
+      error: "Введите корректное время (часы ≥ 0, 0 ≤ минуты < 60)",
+    }));
+    return;
+  }
+
+  try {
+    const timeSpent = `${timeModal.hours}ч ${timeModal.minutes}м`;
+    await updateTask(timeModal.taskId, {
+      status: "выполнено",
+      timeSpent,
+      completedAt: new Date().toISOString(),
+    });
+    
+    setTimeModal({
+      show: false,
+      taskId: null,
+      hours: 0,
+      minutes: 0,
+      error: "",
+    });
+    
+    showNotification("✅ Задача завершена");
+  } catch (error) {
+    console.error('❌ Ошибка при сохранении времени:', error);
+    showNotification('Ошибка при сохранении времени', 'error');
+  }
+}, [timeModal, updateTask, showNotification]);
 
 // Сохранение времени выполнения
 const saveTimeSpent = useCallback(async () => {
@@ -524,14 +556,26 @@ const saveTimeSpent = useCallback(async () => {
             onDelete={deleteTask}
             formatDateTime={formatDateTime}
             onAssigneeChange={async (taskId, assignee) => {
-              await updateTask(taskId, { assignee: assignee || null });
+              try {
+                await updateTask(taskId, { 
+                  assignee: assignee || null 
+                });
+                showNotification("✅ Исполнитель назначен");
+              } catch (error) {
+                showNotification("❌ Ошибка при назначении исполнителя", "error");
+              }
             }}
             onTimeSpentChange={async (taskId, timeSpent) => {
-              await updateTask(taskId, { 
-                timeSpent,
-                status: "выполнено",
-                completedAt: new Date().toISOString() 
-              });
+              try {
+                await updateTask(taskId, { 
+                  timeSpent,
+                  status: "выполнено",
+                  completedAt: new Date().toISOString() 
+                });
+                showNotification("✅ Время выполнения сохранено");
+              } catch (error) {
+                showNotification("❌ Ошибка при сохранении времени", "error");
+              }
             }}
           />
 
