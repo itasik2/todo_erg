@@ -251,104 +251,95 @@ function App() {
   }, [showNotification]);
 
   // Работа с задачами
-  const updateTask = useCallback(async (id, updates) => {
-    try {
-      const updatedTask = await jsonServerAPI.updateTask(id, updates);
-      setTasks(prev => prev.map(task => task.id === id ? updatedTask : task));
-      return updatedTask;
-    } catch (error) {
-      console.error("❌ Ошибка при обновлении заявки:", error);
-      throw error;
-    }
-  }, []);
-
-  const addTaskFromModal = useCallback(async (formData) => {
-    const requiredFields = ["foreman", "lab", "roomNumber", "description"];
-    const missingFields = requiredFields.filter(field => !formData[field]?.trim());
-
-    if (missingFields.length > 0) {
-      throw new Error("Заполните все обязательные поля");
+  // Работа с задачами
+const updateTask = useCallback(async (id, updates) => {
+  try {
+    // Получаем текущую задачу чтобы сохранить все данные
+    const currentTask = tasks.find(task => task.id === id);
+    if (!currentTask) {
+      throw new Error('Задача не найдена');
     }
 
-    try {
-      const taskData = {
-        foreman: formData.foreman.trim(),
-        lab: formData.lab.trim(),
-        roomNumber: formData.roomNumber.trim(),
-        description: formData.description.trim(),
-        assignee: formData.assignee || null,
-        priority: formData.priority,
-        department: formData.department || 'general',
-        status: "новая",
-        acceptedAt: null,
-        completedAt: null,
-        timeSpent: null,
-        author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
-        createdAt: new Date().toISOString()
-      };
+    // Объединяем обновления с текущими данными задачи
+    const updatedTaskData = {
+      ...currentTask,
+      ...updates,
+      // Убедимся, что важные поля не перезаписываются
+      id: currentTask.id,
+      createdAt: currentTask.createdAt,
+      author: currentTask.author
+    };
 
-      console.log('📝 Отправка данных на сервер...', taskData);
-      
-      const newTask = await jsonServerAPI.createTask(taskData);
-      
-      setTasks(prev => [newTask, ...prev]);
-      
-      showNotification("✅ Заявка успешно создана!");
-      return true;
-    } catch (error) {
-      console.error('❌ Ошибка при создании заявки:', error);
-      showNotification(error.message || "Ошибка при создании заявки", "error");
-      throw error;
-    }
-  }, [currentUser, showNotification]);
-  
-  const deleteTask = useCallback(async (id) => {
-    try {
-      await jsonServerAPI.deleteTask(id);
-      setTasks(prev => prev.filter(task => task.id !== id));
-      showNotification("✅ Заявка удалена");
-    } catch (error) {
-      showNotification("❌ Ошибка при удалении заявки", "error");
-    }
-  }, [showNotification]);
+    const updatedTask = await jsonServerAPI.updateTask(id, updatedTaskData);
+    
+    // Обновляем состояние
+    setTasks(prev => prev.map(task => task.id === id ? updatedTask : task));
+    
+    return updatedTask;
+  } catch (error) {
+    console.error("❌ Ошибка при обновлении заявки:", error);
+    throw error;
+  }
+}, [tasks]);
 
-  // Работа с исполнителями
-  const addAssignee = useCallback(async (assigneeName) => {
-    if (!assigneeName.trim()) {
-      showNotification("Введите имя исполнителя", "error");
-      return;
-    }
+const addTaskFromModal = useCallback(async (formData) => {
+  const requiredFields = ["foreman", "lab", "roomNumber", "description"];
+  const missingFields = requiredFields.filter(field => !formData[field]?.trim());
 
-    try {
-      await jsonServerAPI.createAssignee(assigneeName);
-      // Обновляем список исполнителей
-      const updatedAssignees = await jsonServerAPI.getAssignees();
-      setAssignees(updatedAssignees);
-      showNotification("✅ Исполнитель добавлен");
-    } catch (error) {
-      showNotification("❌ Ошибка при добавлении исполнителя", "error");
-    }
-  }, [showNotification]);
+  if (missingFields.length > 0) {
+    throw new Error("Заполните все обязательные поля");
+  }
 
-  const removeAssignee = useCallback(async (assignee) => {
-    try {
-      await jsonServerAPI.deleteAssignee(assignee);
-      // Обновляем список исполнителей
-      const updatedAssignees = await jsonServerAPI.getAssignees();
-      setAssignees(updatedAssignees);
-      showNotification("✅ Исполнитель удалён");
-    } catch (error) {
-      showNotification("❌ Ошибка при удалении исполнителя", "error");
-    }
-  }, [showNotification]);
+  try {
+    const taskData = {
+      foreman: formData.foreman.trim(),
+      lab: formData.lab.trim(),
+      roomNumber: formData.roomNumber.trim(),
+      description: formData.description.trim(),
+      assignee: formData.assignee || null,
+      priority: formData.priority,
+      department: formData.department || 'general',
+      status: "новая",
+      acceptedAt: null,
+      completedAt: null,
+      timeSpent: null,
+      author: currentUser ? `${currentUser.firstName} ${currentUser.lastName || ''}`.trim() : "Неизвестный пользователь",
+      createdAt: new Date().toISOString()
+    };
 
-  // Обработка изменения статуса задачи
-  const handleStatusChange = useCallback(async (taskId, newStatus, currentStatus) => {
-    if (currentStatus === "выполнено" && !adminMode) {
-      showNotification("Только администратор может изменять выполненные задачи", "error");
-      return;
-    }
+    console.log('📝 Отправка данных на сервер...', taskData);
+    
+    const newTask = await jsonServerAPI.createTask(taskData);
+    
+    setTasks(prev => [newTask, ...prev]);
+    
+    showNotification("✅ Заявка успешно создана!");
+    return true;
+  } catch (error) {
+    console.error('❌ Ошибка при создании заявки:', error);
+    showNotification(error.message || "Ошибка при создании заявки", "error");
+    throw error;
+  }
+}, [currentUser, showNotification]);
 
+const deleteTask = useCallback(async (id) => {
+  try {
+    await jsonServerAPI.deleteTask(id);
+    setTasks(prev => prev.filter(task => task.id !== id));
+    showNotification("✅ Заявка удалена");
+  } catch (error) {
+    showNotification("❌ Ошибка при удалении заявки", "error");
+  }
+}, [showNotification]);
+
+// Обработка изменения статуса задачи
+const handleStatusChange = useCallback(async (taskId, newStatus, currentStatus) => {
+  if (currentStatus === "выполнено" && !adminMode) {
+    showNotification("Только администратор может изменять выполненные задачи", "error");
+    return;
+  }
+
+  try {
     if (newStatus === "выполнено") {
       setTimeModal({
         show: true,
@@ -358,24 +349,32 @@ function App() {
         error: "",
       });
     } else {
-      const updates = { status: newStatus };
-      if (newStatus === "в работе") {
-        updates.acceptedAt = new Date().toISOString();
-      }
+      const updates = { 
+        status: newStatus,
+        // Сохраняем время принятия только при переходе в "в работе"
+        ...(newStatus === "в работе" && { acceptedAt: new Date().toISOString() })
+      };
+      
       await updateTask(taskId, updates);
+      showNotification(`✅ Статус изменен на "${newStatus}"`);
     }
-  }, [adminMode, showNotification, updateTask]);
+  } catch (error) {
+    console.error('❌ Ошибка при изменении статуса:', error);
+    showNotification('Ошибка при изменении статуса', 'error');
+  }
+}, [adminMode, showNotification, updateTask]);
 
-  // Сохранение времени выполнения
-  const saveTimeSpent = useCallback(async () => {
-    if (timeModal.hours < 0 || timeModal.minutes < 0 || timeModal.minutes >= 60) {
-      setTimeModal((prev) => ({
-        ...prev,
-        error: "Введите корректное время (часы ≥ 0, 0 ≤ минуты < 60)",
-      }));
-      return;
-    }
+// Сохранение времени выполнения
+const saveTimeSpent = useCallback(async () => {
+  if (timeModal.hours < 0 || timeModal.minutes < 0 || timeModal.minutes >= 60) {
+    setTimeModal((prev) => ({
+      ...prev,
+      error: "Введите корректное время (часы ≥ 0, 0 ≤ минуты < 60)",
+    }));
+    return;
+  }
 
+  try {
     const timeSpent = `${timeModal.hours}ч ${timeModal.minutes}м`;
     await updateTask(timeModal.taskId, {
       status: "выполнено",
@@ -390,7 +389,13 @@ function App() {
       minutes: 0,
       error: "",
     });
-  }, [timeModal, updateTask]);
+    
+    showNotification("✅ Задача завершена");
+  } catch (error) {
+    console.error('❌ Ошибка при сохранении времени:', error);
+    showNotification('Ошибка при сохранении времени', 'error');
+  }
+}, [timeModal, updateTask, showNotification]);
 
   // Статистика
   const stats = useMemo(() => ({
