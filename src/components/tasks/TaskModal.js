@@ -8,12 +8,11 @@ const initialFormState = {
   lab: '',
   roomNumber: '',
   description: '',
-  assignee: '',
-  priority: 'medium',
-  department: 'general' // Добавлено поле подразделения
+  department: 'general', // Теперь это обязательное поле вместо assignee
+  priority: 'medium'
 };
 
-const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
+const TaskModal = ({ show, onClose, onSubmit }) => { // Убрали assignees из пропсов
   const {
     formData,
     errors,
@@ -55,7 +54,7 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     console.log('🔄 Начало отправки формы...');
 
     // Простая валидация
-    const requiredFields = ['foreman', 'lab', 'roomNumber', 'description'];
+    const requiredFields = ['foreman', 'lab', 'roomNumber', 'description', 'department'];
     const missingFields = requiredFields.filter(field => !formData[field]?.trim());
     
     if (missingFields.length > 0) {
@@ -92,7 +91,8 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
     !formData.foreman?.trim() || 
     !formData.lab?.trim() || 
     !formData.roomNumber?.trim() || 
-    !formData.description?.trim();
+    !formData.description?.trim() ||
+    !formData.department?.trim();
 
   if (!show) return null;
 
@@ -188,7 +188,6 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
             </div>
           </div>
 
-          {/* Добавлено поле подразделения */}
           <div className="form-row">
             <div className="form-group">
               <label className="required">Подразделение</label>
@@ -198,27 +197,12 @@ const TaskModal = ({ show, onClose, onSubmit, assignees }) => {
                 onChange={handleInputChange}
                 className="form-input"
                 disabled={isSubmitting}
+                required
               >
                 <option value="general">🏢 Общие задания</option>
                 <option value="plumber">🔧 Сантехник</option>
                 <option value="electrician">⚡ Электрик</option>
                 <option value="adjustment">🛠️ Наладка оборудования</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Исполнитель</label>
-              <select
-                name="assignee"
-                value={formData.assignee}
-                onChange={handleInputChange}
-                className="form-input"
-                disabled={isSubmitting}
-              >
-                <option value="">-- Не назначен --</option>
-                {assignees.map(assignee => (
-                  <option key={assignee} value={assignee}>{assignee}</option>
-                ))}
               </select>
             </div>
           </div>
