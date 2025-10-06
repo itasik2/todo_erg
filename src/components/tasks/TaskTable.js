@@ -37,6 +37,7 @@ const TaskTable = ({
       <table className="tasks-table">
         <thead>
           <tr>
+            <th>Подразделение</th>
             <th>Дата подачи</th>
             <th>Бригадир</th>
             <th>Лаборатория</th>
@@ -55,6 +56,15 @@ const TaskTable = ({
               key={task.id} 
               className={`task-row priority-${task.priority} status-${task.status}`}
             >
+
+              <td>
+                <span className={`department-badge department-${task.department}`}>
+                  {task.department === 'general' && '🏢 Общие'}
+                  {task.department === 'plumber' && '🔧 Сантехник'}
+                  {task.department === 'electrician' && '⚡ Электрик'}
+                  {task.department === 'adjustment' && '🛠️ Наладка'}
+                </span>
+              </td>
               <td>{formatDateTime(task.createdAt)}</td>
               <td>{task.foreman}</td>
               <td>{task.lab}</td>
