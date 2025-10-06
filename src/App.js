@@ -17,6 +17,7 @@ import SearchPanel from "./components/search/SearchPanel";
 import Pagination from "./components/common/Pagination";
 import ExportButton from "./components/export/ExportButton";
 import NotificationCenter from "./components/common/NotificationCenter";
+import DepartmentTabs from './components/tasks/DepartmentTabs';
 
 function App() {
   // Состояния
@@ -37,6 +38,7 @@ function App() {
   });
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [serverStatus, setServerStatus] = useState('checking');
+  const [activeDepartment, setActiveDepartment] = useState('all');
 
   // Хуки
   const { 
@@ -109,17 +111,33 @@ function App() {
   }, [loadData]); // ✅ Добавлен loadData в зависимости
 
   // Фильтрация задач
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      const matchesDate =
-        !dateFilter ||
-        new Date(task.createdAt).toLocaleDateString() ===
-          new Date(dateFilter).toLocaleDateString();
-      const matchesHideCompleted =
-        !hideCompleted || task.status !== "выполнено";
-      return matchesDate && matchesHideCompleted;
-    });
-  }, [tasks, dateFilter, hideCompleted]);
+const filteredTasks = useMemo(() => {
+  return tasks.filter((task) => {
+    const matchesDate =
+      !dateFilter ||
+      new Date(task.createdAt).toLocaleDateString() ===
+        new Date(dateFilter).toLocaleDateString();
+    const matchesHideCompleted =
+      !hideCompleted || task.status !== "выполнено";
+    const matchesDepartment = 
+      activeDepartment === 'all' || task.department === activeDepartment;
+    
+    return matchesDate && matchesHideCompleted && matchesDepartment;
+  });
+}, [tasks, dateFilter, hideCompleted, activeDepartment]);
+
+// Добавьте статистику по подразделениям
+const departmentStats = useMemo(() => {
+  const stats = {
+    all: tasks.length,
+    general: tasks.filter(t => t.department === 'general').length,
+    plumber: tasks.filter(t => t.department === 'plumber').length,
+    electrician: tasks.filter(t => t.department === 'electrician').length,
+    adjustment: tasks.filter(t => t.department === 'adjustment').length
+  };
+  
+  return stats;
+}, [tasks]);
 
   // Поиск и фильтрация
   const searchableFields = [
@@ -401,6 +419,11 @@ const addTaskFromModal = useCallback(async (formData) => {
             hasActiveSearch={hasActiveSearch}
           />
 
+          <DepartmentTabs
+          activeDepartment={activeDepartment}
+          onDepartmentChange={setActiveDepartment}
+          />
+
           <div className="toolbar">
             <ExportButton tasks={searchResults} />
             {hasActiveSearch && (
@@ -408,6 +431,15 @@ const addTaskFromModal = useCallback(async (formData) => {
                 Найдено: {searchResults.length} заявок
               </span>
             )}
+             <span className="department-info">
+            {activeDepartment !== 'all' && 
+              `Подразделение: ${
+                activeDepartment === 'general' ? '🏢 Общие' :
+                activeDepartment === 'plumber' ? '🔧 Сантехник' :
+                activeDepartment === 'electrician' ? '⚡ Электрик' : '🛠️ Наладка'
+              } (${departmentStats[activeDepartment]})`
+            }
+          </span>
           </div>
 
           <div className="filters">
