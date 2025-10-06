@@ -45,8 +45,7 @@ function App() {
   const { 
     notifications, 
     showNotification, 
-    removeNotification, 
-    audioRef
+    removeNotification 
   } = useNotifications();
 
   const { theme, toggleTheme } = useTheme();
@@ -149,7 +148,7 @@ function App() {
       };
       
       // В реальном приложении здесь будет API вызов для отправки email
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Имитация задержки
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       showNotification(`Отчет отправлен на ${email}`, 'success');
       
@@ -161,7 +160,7 @@ function App() {
     }
   }, [tasks, showNotification]);
 
-  // Добавьте статистику по подразделениям
+  // Статистика по подразделениям
   const departmentStats = useMemo(() => {
     const stats = {
       all: tasks.length,
@@ -427,8 +426,6 @@ function App() {
   return (
     <Router>
       <div className="app" data-theme={theme}>
-        <audio ref={audioRef} preload="auto" />
-
         {/* Статус подключения */}
         <div className={`connection-status ${serverStatus === 'online' ? 'online' : 'offline'}`}>
           {serverStatus === 'online' ? '🌐 Сервер онлайн' : '🔴 Сервер офлайн'}
@@ -475,7 +472,9 @@ function App() {
           />
 
           <div className="toolbar">
-            <ExportButton tasks={searchResults} />
+            {/* Кнопка экспорта только для администраторов */}
+            {adminMode && <ExportButton tasks={searchResults} />}
+            
             {hasActiveSearch && (
               <span className="search-info">
                 Найдено: {searchResults.length} заявок
