@@ -1,0 +1,131 @@
+.email-export {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  margin-bottom: 1.5rem;
+}
+
+.email-export h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 0.5rem;
+}
+
+.email-form {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.form-group input,
+.form-group select {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.export-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.quick-export-btn,
+.schedule-export-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  min-width: 150px;
+}
+
+.quick-export-btn {
+  background: #27ae60;
+  color: white;
+}
+
+.quick-export-btn:hover:not(:disabled) {
+  background: #219a52;
+}
+
+.schedule-export-btn {
+  background: #e67e22;
+  color: white;
+}
+
+.schedule-export-btn:hover:not(:disabled) {
+  background: #d35400;
+}
+
+.quick-export-btn:disabled,
+.schedule-export-btn:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.export-info {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border-left: 4px solid #3498db;
+}
+
+.export-info h4 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.export-info ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.export-info li {
+  margin-bottom: 0.25rem;
+}
+
+.department-stats {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ecf0f1;
+}
+
+.department-stats h5 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .export-actions {
+    flex-direction: column;
+  }
+  
+  .quick-export-btn,
+  .schedule-export-btn {
+    min-width: auto;
+  }
+}
