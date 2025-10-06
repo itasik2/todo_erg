@@ -7,6 +7,33 @@
   padding-bottom: 1rem;
 }
 
+.department-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.department-general {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.department-plumber {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.department-electrician {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.department-adjustment {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
 .tab {
   display: flex;
   align-items: center;
