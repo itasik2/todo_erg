@@ -3,11 +3,11 @@ import './DepartmentTabs.css';
 
 const DepartmentTabs = ({ activeDepartment, onDepartmentChange }) => {
   const departments = [
-    { key: 'all', label: '📋 Все заявки', icon: '📋' },
-    { key: 'general', label: '🏢 Общие', icon: '🏢' },
-    { key: 'plumber', label: '🔧 Сантехник', icon: '🔧' },
-    { key: 'electrician', label: '⚡ Электрик', icon: '⚡' },
-    { key: 'adjustment', label: '🛠️ Наладка', icon: '🛠️' }
+    { key: 'all', label: 'Все заявки', icon: '📋' },
+    { key: 'general', label: 'Общие', icon: '🏢' },
+    { key: 'plumber', label: 'Сантехник', icon: '🔧' },
+    { key: 'electrician', label: 'Электрик', icon: '⚡' },
+    { key: 'adjustment', label: 'Наладка', icon: '🛠️' }
   ];
 
   return (
