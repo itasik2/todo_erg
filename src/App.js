@@ -201,7 +201,6 @@ const handleAdminLogin = useCallback((adminData) => {
   }, [showNotification]);
 
   // Работа с задачами
- // В функции addTaskFromModal обновите создание задачи:
 const addTaskFromModal = useCallback(async (formData) => {
   const requiredFields = ["foreman", "lab", "roomNumber", "description"];
   const missingFields = requiredFields.filter(field => !formData[field]?.trim());
