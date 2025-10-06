@@ -1,101 +1,77 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const audioRef = useRef(null);
 
-  const removeNotification = useCallback((id) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
+  // Функция для воспроизведения звука
+  const playSound = useCallback((type = 'success') => {
+    try {
+      // Создаем звук программно вместо использования файлов
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      if (type === 'success') {
+        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+      } else if (type === 'error') {
+        oscillator.frequency.setValueAtTime(392.00, audioContext.currentTime); // G4
+        oscillator.frequency.setValueAtTime(349.23, audioContext.currentTime + 0.1); // F4
+        oscillator.frequency.setValueAtTime(293.66, audioContext.currentTime + 0.2); // D4
+      }
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.log('Аудио недоступно:', error);
+    }
   }, []);
 
-  const playSound = (type) => {
-    if (audioRef.current) {
-      audioRef.current.src = type === 'success' ? '/sounds/success.mp3' : '/sounds/error.mp3';
-      audioRef.current.play().catch(() => {
-        // Игнорируем ошибки воспроизведения
-      });
-    }
-  };
-
-  const showNotification = useCallback((message, type = 'success', options = {}) => {
-    const id = Date.now() + Math.random();
-    const notification = {
+  const showNotification = useCallback((message, type = 'success', duration = 5000) => {
+    const id = Date.now().toString();
+    const newNotification = {
       id,
       message,
       type,
-      duration: options.duration || 3000,
-      sound: options.sound !== false
+      timestamp: new Date(),
     };
 
-    setNotifications(prev => [...prev, notification]);
+    setNotifications(prev => [...prev, newNotification]);
 
-    if (notification.sound) {
-      playSound(type);
-    }
+    // Воспроизводим звук
+    playSound(type);
 
-    if (notification.duration > 0) {
+    // Автоматическое удаление уведомления
+    if (duration > 0) {
       setTimeout(() => {
         removeNotification(id);
-      }, notification.duration);
+      }, duration);
     }
 
     return id;
-  }, [removeNotification]); // Добавили недостающую зависимость
+  }, [playSound, removeNotification]);
+
+  const removeNotification = useCallback((id) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  }, []);
 
   const clearAllNotifications = useCallback(() => {
     setNotifications([]);
   }, []);
-
-  const checkPushSupport = useCallback(() => {
-    return 'Notification' in window && 'serviceWorker' in navigator;
-  }, []);
-
-  const requestPushPermission = useCallback(async () => {
-    if (!checkPushSupport()) {
-      throw new Error('Push-уведомления не поддерживаются');
-    }
-
-    if (Notification.permission === 'granted') {
-      return true;
-    }
-
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
-  }, [checkPushSupport]);
-
-  const showPushNotification = useCallback(async (title, options = {}) => {
-    if (!checkPushSupport()) {
-      console.warn('Push-уведомления не поддерживаются');
-      return;
-    }
-
-    if (Notification.permission !== 'granted') {
-      const granted = await requestPushPermission();
-      if (!granted) return;
-    }
-
-    const notification = new Notification(title, {
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
-      ...options
-    });
-
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
-
-    return notification;
-  }, [checkPushSupport, requestPushPermission]);
 
   return {
     notifications,
     showNotification,
     removeNotification,
     clearAllNotifications,
-    showPushNotification,
-    requestPushPermission,
-    checkPushSupport,
-    audioRef
+    audioRef,
   };
 };
