@@ -508,7 +508,7 @@ const addTaskFromModal = useCallback(async (formData) => {
           show={showTaskModal}
           onClose={() => setShowTaskModal(false)}
           onSubmit={addTaskFromModal}
-          assignees={assignees}
+         
         />
 
         <TimeInputModal
